@@ -1,97 +1,121 @@
+<div align="center">
+
+<img src="apps/invoices/static/img/hub-financeiro-wide-v2.png" alt="Hub Financeiro" width="500" />
+
 # Hub Financeiro
 
-Aplicacao web em Django para organizar gastos de cartao de credito a partir de CSV.
+**Uma solução moderna e modular para gestão financeira pessoal com Django.**
 
-## O que o projeto faz
+[![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![Django](https://img.shields.io/badge/Django-5.0.1-092E20?style=flat-square&logo=django&logoColor=white)](https://djangoproject.com)
+[![SQLite](https://img.shields.io/badge/SQLite-Local-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://sqlite.org)
+[![Status](https://img.shields.io/badge/Status-Development-orange?style=flat-square)](https://github.com/flavianojr1/hub-financeiro)
+[![Architecture](https://img.shields.io/badge/Architecture-Core--Apps-blueviolet?style=flat-square)](https://github.com/flavianojr1/hub-financeiro)
 
-- Importacao de faturas CSV
-- Deteccao de compras parceladas e projecao de parcelas futuras
-- Categorizacao automatica por regras de palavra-chave
-- Dashboard com filtros por mes e por cartao
-- Graficos por categoria e evolucao temporal (Chart.js)
-- Gestao de cartoes, faturas, categorias e regras
-- Area de autenticacao e perfil de usuario
+---
 
-## Stack
+[Sobre](#-sobre) • [Funcionalidades](#-funcionalidades) • [Tecnologias](#-tecnologias) • [Estrutura](#-estrutura) • [Começando](#-começando) • [Comandos](#-comandos)
 
-- Python 3.13
-- Django 5.0.1
-- SQLite (local) / Postgres (producao)
-- WhiteNoise para static files
-- Gunicorn para WSGI
+</div>
 
-## Estrutura principal
+## 📖 Sobre
 
-- `nubank_project/` configuracoes do Django
-- `invoices/` regras de negocio (upload, parser, dashboard)
-- `pages/` home, autenticacao e perfil
-- `templates/` templates globais
-- `api/index.py` entrada serverless para Vercel
-- `vercel.json` roteamento/build para Vercel
+O **Hub Financeiro** nasceu da necessidade de simplificar o controle de gastos complexos, como faturas de cartão de crédito com múltiplas parcelas. Diferente de uma planilha estática, ele oferece uma plataforma dinâmica que processa extratos CSV, projeta gastos futuros e categoriza suas despesas automaticamente, permitindo que você foque no que realmente importa: **sua saúde financeira.**
 
-## Executar localmente
+---
 
-1. Criar e ativar virtualenv
+## ✨ Funcionalidades
+
+- 💳 **Gestão de Cartões**: Cadastro e acompanhamento individual de múltiplos cartões.
+- 📂 **Parser de CSV**: Importação simplificada de extratos (NuBank e outros).
+- 🗓️ **Projeção de Parcelas**: Visualize hoje o impacto das compras parceladas nos próximos meses.
+- 🏷️ **Categorização Inteligente**: Regras baseadas em palavras-chave para classificação automática.
+- 📊 **Dashboard de Insights**: Visão geral de gastos por categoria e evolução mensal.
+- 🔒 **Privacidade**: Execução 100% local com SQLite para total controle dos seus dados.
+
+---
+
+## 🛠️ Tecnologias
+
+O projeto foi construído utilizando as melhores práticas do ecossistema Python:
+
+- **Linguagem:** [Python 3.x](https://python.org)
+- **Framework Web:** [Django 5.0.1](https://djangoproject.com)
+- **Banco de Dados:** [SQLite](https://sqlite.org) (Local)
+- **Gráficos:** [Chart.js](https://www.chartjs.org/)
+- **Estilização:** CSS Vanilla & [Font Awesome](https://fontawesome.com/)
+
+---
+
+## 🏗️ Estrutura do Projeto
+
+O Hub Financeiro utiliza uma arquitetura modular **Core/Apps**, separando preocupações de infraestrutura da lógica de negócio:
 
 ```bash
-python -m venv .venv
-.venv\Scripts\activate
+hub-financeiro/
+├── core/             # Configurações globais, URLs e WSGI/ASGI
+├── apps/             # Módulos de negócio (apps Django)
+│   ├── invoices/     # Lógica de faturas, upload e dashboard
+│   └── pages/        # Gestão de usuários e páginas institucionais
+├── templates/        # Arquivos HTML globais e componentes
+└── main.py           # Ponto único de entrada do sistema
 ```
 
-2. Instalar dependencias
+---
 
+## 🚀 Começando
+
+Siga os passos abaixo para rodar o projeto em sua máquina local:
+
+### 1. Clonar o Repositório
 ```bash
+git clone https://github.com/flavianojr1/hub-financeiro.git
+cd hub-financeiro
+```
+
+### 2. Configurar Ambiente
+```bash
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# Linux/Mac
+source .venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
-3. Configurar ambiente local (`.env`)
-
-Use o `.env.example` como base.
-
-4. Migrar banco
-
-```bash
-python manage.py migrate
+### 3. Variáveis de Ambiente
+Crie um arquivo `.env` na raiz:
+```env
+DEBUG=True
+SECRET_KEY=sua_chave_secreta_aqui
 ```
 
-5. Rodar servidor
-
+### 4. Inicializar e Rodar
 ```bash
-python manage.py runserver
+python main.py migrate
+python main.py
 ```
+Acesse: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
-Acesse: `http://127.0.0.1:8000/`
+---
 
-## Variaveis de ambiente
+## ⌨️ Comandos Rápidos
 
-Minimo recomendado:
+O `main.py` substitui o tradicional `manage.py`, centralizando a administração:
 
-- `SECRET_KEY`
-- `DEBUG`
-- `ALLOWED_HOSTS`
-- `CSRF_TRUSTED_ORIGINS`
-- `DATABASE_URL` (em producao)
+| Objetivo | Comando |
+| :--- | :--- |
+| **Rodar Servidor** | `python main.py` |
+| **Aplicar Migrações** | `python main.py migrate` |
+| **Criar Superusuário** | `python main.py createsuperuser` |
+| **Gerar Migrações** | `python main.py makemigrations` |
+| **Console Django** | `python main.py shell` |
 
-## Deploy na Vercel
+---
 
-No projeto da Vercel:
+<div align="center">
 
-1. Framework Preset: `Other`
-2. Build Command: usa o `vercel.json` do repo
-3. Configurar env vars de producao:
-   - `SECRET_KEY`
-   - `DEBUG=False`
-   - `ALLOWED_HOSTS=<seu-projeto>.vercel.app`
-   - `CSRF_TRUSTED_ORIGINS=https://<seu-projeto>.vercel.app`
-   - `DATABASE_URL=<postgres-url>`
+**[Hub Financeiro](https://github.com/flavianojr1/hub-financeiro)** • Organização e Clareza para o seu bolso.
 
-Depois do primeiro deploy, rode migracoes no banco de producao.
-
-## Seguranca de repositorio
-
-- `.env`, banco local e arquivos locais de IDE/agentes estao ignorados no Git
-- Hook versionado em `.githooks/pre-commit` bloqueia commits de arquivos sensiveis
-
-## Licenca
-
-Projeto de uso pessoal/estudo.
+</div>
