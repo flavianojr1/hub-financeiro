@@ -172,6 +172,15 @@ function renderTemporalChart(data) {
                     cornerRadius: 8,
                     displayColors: true,
                     callbacks: {
+                        afterTitle: function(context) {
+                            let sum = 0;
+                            context[0].chart.data.datasets.forEach(dataset => {
+                                if (dataset.data[context[0].dataIndex]) {
+                                    sum += dataset.data[context[0].dataIndex];
+                                }
+                            });
+                            return '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nTotal: R$ ' + sum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        },
                         label: function (context) {
                             return ' ' + context.dataset.label + ': R$ ' + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         }
