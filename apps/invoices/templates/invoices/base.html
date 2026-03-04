@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema de análise de faturas do Nubank">
+    {% load static %}
+    <title>{% block title %}Análise de Faturas Nubank{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'img/hub-financeiro-icon.png' %}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-bold-rounded/css/uicons-bold-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <img src="{% static 'img/hub-financeiro-logo.png' %}" alt="Hub Financeiro"
+                    style="max-height: 60px; width: auto;">
+            </div>
+            <button class="sidebar-collapse-btn" data-sidebar-toggle title="Recolher menu" aria-label="Recolher menu">
+                <i class="fi fi-br-menu-burger" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{% url 'dashboard' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+                id="nav-dashboard">
+                <span class="sidebar-icon"><i class="fi fi-br-chart-pie"></i></span>
+                <span class="sidebar-label">Dashboard</span>
+            </a>
+            <a href="{% url 'upload' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'upload' %}active{% endif %}"
+                id="nav-upload">
+                <span class="sidebar-icon"><i class="fi fi-br-file-upload"></i></span>
+                <span class="sidebar-label">Nova Fatura</span>
+            </a>
+            <a href="{% url 'invoice_list' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'invoice_list' %}active{% endif %}"
+                id="nav-invoices">
+                <span class="sidebar-icon"><i class="fi fi-br-file-invoice"></i></span>
+                <span class="sidebar-label">Faturas</span>
+            </a>
+            <a href="{% url 'category_manage' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'category_manage' %}active{% endif %}"
+                id="nav-categories">
+                <span class="sidebar-icon"><i class="fi fi-br-tags"></i></span>
+                <span class="sidebar-label">Categorias</span>
+            </a>
+            <a href="{% url 'card_manage' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'card_manage' %}active{% endif %}"
+                id="nav-cards">
+                <span class="sidebar-icon"><i class="fi fi-br-credit-card"></i></span>
+                <span class="sidebar-label">Cartões</span>
+            </a>
+        </nav>
+
+        <!-- User Profile Section -->
+        <div class="sidebar-profile-section" style="padding: 0 var(--spacing-sm); margin-bottom: var(--spacing-sm);">
+            <div style="height: 1px; background: var(--sidebar-border); margin: var(--spacing-sm) 0;"></div>
+            <div class="sidebar-profile-row">
+                <a href="{% url 'profile' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
+                    id="nav-profile">
+                    <span class="sidebar-icon"><i class="fi fi-br-user"></i></span>
+                    <span class="sidebar-label">Meu Perfil</span>
+                </a>
+                <form action="{% url 'logout' %}" method="post" class="inline-form sidebar-quick-logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="sidebar-quick-logout" title="Sair" aria-label="Sair">
+                        <i class="fi fi-br-exit" aria-hidden="true"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="theme-toggle" id="themeToggle">
+                <button class="theme-btn" data-theme="light" id="themeLightBtn" title="Tema Claro">
+                    <i class="fi fi-br-sun" aria-hidden="true"></i>
+                </button>
+                <button class="theme-btn" data-theme="dark" id="themeDarkBtn" title="Tema Escuro">
+                    <i class="fi fi-sr-moon" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="sidebar-credit">
+                feito por
+                <a href="https://www.linkedin.com/in/flaviano-junior" target="_blank"
+                    rel="noopener noreferrer">flavianojr1</a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Wrapper -->
+    <div class="main-wrapper" id="mainWrapper">
+        <!-- Top Bar -->
+        <header class="topbar">
+            <button class="sidebar-toggle" data-sidebar-toggle title="Menu" aria-label="Abrir menu">
+                <i class="fi fi-br-menu-burger" aria-hidden="true"></i>
+            </button>
+            <div class="topbar-title">{% block topbar_title %}Dashboard{% endblock %}</div>
+            <div class="topbar-actions">
+                <div class="user-menu" style="display: flex; align-items: center; gap: 1rem; margin-right: 1rem;">
+                    <span class="text-secondary" style="font-size: 0.9rem;">
+                        {% if request.user.userprofile.display_name %}
+                        {{ request.user.userprofile.display_name }}
+                        {% else %}
+                        {{ request.user.email|default:request.user.username }}
+                        {% endif %}
+                    </span>
+                    <form action="{% url 'logout' %}" method="post" class="inline-form">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger-ghost" title="Sair">
+                            Sair
+                        </button>
+                    </form>
+                </div>
+                <div class="theme-toggle-topbar" id="themeToggleTopbar">
+                    <button class="theme-btn-topbar" data-theme="light" id="themeLightBtnTopbar" title="Tema Claro">
+                        <i class="fi fi-br-sun" aria-hidden="true"></i>
+                    </button>
+                    <button class="theme-btn-topbar" data-theme="dark" id="themeDarkBtnTopbar" title="Tema Escuro">
+                        <i class="fi fi-sr-moon" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Messages -->
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                {{ message }}
+                <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Main Content -->
+        <main class="container">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Theme Script -->
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem('nubank-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeButtons(savedTheme);
+
+            document.querySelectorAll('.theme-btn, .theme-btn-topbar').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const theme = this.getAttribute('data-theme');
+                    document.documentElement.setAttribute('data-theme', theme);
+                    localStorage.setItem('nubank-theme', theme);
+                    updateThemeButtons(theme);
+                });
+            });
+
+            function updateThemeButtons(theme) {
+                document.querySelectorAll('.theme-btn, .theme-btn-topbar').forEach(btn => {
+                    btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
+                });
+            }
+
+            const sidebarToggles = document.querySelectorAll('[data-sidebar-toggle]');
+            const sidebar = document.getElementById('sidebar');
+            const body = document.body;
+            const SIDEBAR_COLLAPSE_KEY = 'hub-sidebar-collapsed';
+
+            const isMobileViewport = () => window.matchMedia('(max-width: 768px)').matches;
+
+            const applyDesktopSidebarState = (collapsed) => {
+                body.classList.toggle('sidebar-collapsed', collapsed);
+                sidebar.classList.toggle('collapsed', collapsed);
+                sidebarToggles.forEach((toggleBtn) => {
+                    const isTopbarBtn = toggleBtn.classList.contains('sidebar-toggle');
+                    if (isTopbarBtn) {
+                        toggleBtn.setAttribute('title', 'Menu');
+                        return;
+                    }
+                    toggleBtn.setAttribute('title', collapsed ? 'Expandir menu' : 'Recolher menu');
+                });
+            };
+
+            const restoreSidebarState = () => {
+                const savedCollapsed = localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+                if (isMobileViewport()) {
+                    applyDesktopSidebarState(false);
+                    return;
+                }
+                applyDesktopSidebarState(savedCollapsed);
+            };
+
+            if (sidebarToggles.length && sidebar) {
+                sidebarToggles.forEach((toggleBtn) => toggleBtn.addEventListener('click', () => {
+                    if (isMobileViewport()) {
+                        sidebar.classList.toggle('open');
+                        return;
+                    }
+
+                    const shouldCollapse = !body.classList.contains('sidebar-collapsed');
+                    applyDesktopSidebarState(shouldCollapse);
+                    localStorage.setItem(SIDEBAR_COLLAPSE_KEY, shouldCollapse ? '1' : '0');
+                }));
+
+                document.addEventListener('click', (e) => {
+                    const clickedOnToggle = Array.from(sidebarToggles).some((btn) => btn === e.target || btn.contains(e.target));
+                    if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && !clickedOnToggle) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+
+                window.addEventListener('resize', () => {
+                    if (isMobileViewport()) {
+                        sidebar.classList.remove('open');
+                        applyDesktopSidebarState(false);
+                        return;
+                    }
+                    restoreSidebarState();
+                });
+
+                restoreSidebarState();
+            }
+
+            setTimeout(() => {
+                document.querySelectorAll('.alert').forEach(alert => {
+                    alert.style.opacity = '0';
+                    alert.style.transform = 'translateX(100%)';
+                    setTimeout(() => alert.remove(), 300);
+                });
+            }, 5000);
+        })();
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

@@ -1,0 +1,715 @@
+{% extends 'invoices/base.html' %}
+{% load static %}
+
+{% block title %}Categorias - Hub Financeiro{% endblock %}
+{% block topbar_title %}Categorias & Regras{% endblock %}
+
+{% block content %}
+<div>
+    <div class="category-layout">
+        <!-- Coluna Esquerda: Categorias -->
+        <div class="category-column">
+            <div class="card fade-in-up" style="animation-delay: 0.1s;">
+                <h2 class="card-title">📁 Categorias</h2>
+
+                <div class="rule-help">
+                    <p>Adicione categorias para organizar suas transações. Cada categoria pode ter um ícone e cor
+                        personalizada.</p>
+                </div>
+
+                <!-- Form para adicionar categoria -->
+                <form method="post" class="inline-add-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_category">
+                    <div class="form-row category-form-row">
+                        <div class="form-group category-form-square">
+                            {{ category_form.icon }}
+                        </div>
+                        <div class="form-group category-form-wide">
+                            {{ category_form.name }}
+                        </div>
+                        <div class="form-group category-form-square"
+                            style="position: relative; width: 50px; height: 50px; flex-shrink: 0;">
+                            <div style="display: none;">{{ category_form.color }}</div>
+                            <div id="categoryColorDisplay"
+                                style="width: 50px; height: 50px; border-radius: 6px; cursor: pointer; background: #8A05BE; border: 1px solid var(--border-color); display: block;"
+                                title="Escolher cor"></div>
+                        </div>
+                        <button type="submit" class="btn btn-primary category-btn-square">+</button>
+                    </div>
+                    {% if category_form.errors %}
+                    <div class="form-errors">
+                        {% for field, errors in category_form.errors.items %}
+                        {% for error in errors %}
+                        <p class="form-error">{{ error }}</p>
+                        {% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </form>
+
+                <!-- Lista de categorias -->
+                {% if categories %}
+                <div class="items-list">
+                    {% for cat in categories %}
+                    <div class="item-row">
+                        <div class="item-info">
+                            <span class="item-icon">{{ cat.icon }}</span>
+                            <span class="item-name">{{ cat.name }}</span>
+                            <span class="item-color-dot" style="background: {{ cat.color }};"></span>
+                            <span class="badge badge-purple" style="font-size: 0.75rem;">Regras:
+                                {{cat.rules.count}}</span>
+                        </div>
+                        <form method="post" class="inline-form"
+                            onsubmit="return confirm('Deletar a categoria \'{{ cat.name }}\' e todas as suas regras?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_category">
+                            <input type="hidden" name="category_id" value="{{ cat.pk }}">
+                            <button type="submit" class="btn btn-danger-ghost btn-xs" title="Deletar">✕</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-secondary" style="text-align: center; padding: 2rem;">
+                    Nenhuma categoria criada. Adicione uma acima!
+                </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Coluna Direita: Regras -->
+        <div class="category-column">
+            <div class="card fade-in-up" style="animation-delay: 0.2s;">
+                <div class="card-title-row">
+                    <h2 class="card-title" style="margin-bottom: 0;">🔗 Regras de Palavras-Chave</h2>
+                    <form method="post" class="inline-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="recategorize">
+                        <button type="submit" class="btn btn-secondary btn-sm"
+                            title="Reaplicar todas as regras nas transações existentes">
+                            🔄 Recategorizar
+                        </button>
+                    </form>
+                </div>
+
+                <div class="rule-help">
+                    <p>Quando uma transação contém a <strong>palavra-chave</strong>, ela é automaticamente classificada
+                        na categoria correspondente.</p>
+                </div>
+
+                <!-- Form para adicionar regra -->
+                {% if categories %}
+                <form method="post" class="inline-add-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_rule">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1;">
+                            {{ rule_form.keyword }}
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            {{ rule_form.category }}
+                        </div>
+                        <div class="form-group" style="flex: 0 0 80px;">
+                            {{ rule_form.priority }}
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">+</button>
+                    </div>
+                    {% if rule_form.errors %}
+                    <div class="form-errors">
+                        {% for field, errors in rule_form.errors.items %}
+                        {% for error in errors %}
+                        <p class="form-error">{{ error }}</p>
+                        {% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </form>
+                {% else %}
+                <div class="rule-help" style="background: rgba(245, 87, 108, 0.1); border-color: var(--accent-pink);">
+                    <p>⚠️ Crie pelo menos uma <strong>categoria</strong> antes de adicionar regras.</p>
+                </div>
+                {% endif %}
+
+                <!-- Lista de regras -->
+                {% if rules %}
+                <div class="items-list">
+                    {% for rule in rules %}
+                    <div class="item-row">
+                        <div class="item-info">
+                            <span class="rule-keyword">"{{ rule.keyword }}"</span>
+                            <span class="rule-arrow">→</span>
+                            <span class="badge badge-purple">{{ rule.category.icon }} {{ rule.category.name }}</span>
+                            {% if rule.priority > 0 %}
+                            <span class="badge badge-cyan" style="font-size: 0.7rem;">P{{ rule.priority }}</span>
+                            {% endif %}
+                        </div>
+                        <form method="post" class="inline-form" onsubmit="return confirm('Deletar esta regra?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_rule">
+                            <input type="hidden" name="rule_id" value="{{ rule.pk }}">
+                            <button type="submit" class="btn btn-danger-ghost btn-xs" title="Deletar">✕</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-secondary" style="text-align: center; padding: 2rem;">
+                    Nenhuma regra criada. Adicione palavras-chave acima!
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Nova Seção: Classificação Rápida -->
+    <div class="card fade-in-up" style="margin-top: 2rem; animation-delay: 0.3s;">
+        <div style="margin-bottom: 1.5rem;">
+            <h2 class="card-title" style="margin-bottom: 0;">🚀 Classificação Rápida (Outros)</h2>
+            <p class="text-secondary" style="margin-top: 0.5rem; margin-bottom: 0;">Identifique e crie regras para
+                transações recentes que caíram em "Outros".</p>
+        </div>
+
+        {% if uncategorized_transactions %}
+        <div
+            style="display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; margin-bottom: 1rem;">
+            <div style="flex: 1;">
+                <input type="text" id="quickClassifySearch" class="form-input"
+                    placeholder="🔍 Buscar transação... (ex: Uber)" style="width: 100%;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; flex: 0 0 auto;">
+                <label for="pageSizeSelect"
+                    style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 500;">Exibir:</label>
+                <select id="pageSizeSelect" class="form-input" style="height: auto;">
+                    <option value="5">5 registros</option>
+                    <option value="10">10 registros</option>
+                    <option value="20">20 registros</option>
+                    <option value="50">50 registros</option>
+                    <option value="100">100 registros</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="quick-classify-list">
+            <div class="list-header"
+                style="display: flex; font-weight: bold; padding: 10px; border-bottom: 2px solid #eee; color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase;">
+                <div style="flex: 0 0 100px;">Data</div>
+                <div style="flex: 2;">Descrição</div>
+                <div style="flex: 2;">Palavra-Chave (Regra)</div>
+                <div style="flex: 2;">Categoria</div>
+                <div style="flex: 0 0 80px;"></div>
+            </div>
+
+            <div id="quickClassifyContainer">
+                {% for t in uncategorized_transactions %}
+                <form method="post" class="list-row fast-classify-row"
+                    style="display: flex; align-items: center; padding: 12px 10px; border-bottom: 1px solid #f0f0f0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="quick_rule">
+
+                    <div style="flex: 0 0 100px; color: var(--text-secondary);">{{ t.date|date:"d/m/Y" }}</div>
+                    <div style="flex: 2; padding-right: 15px; font-size: 0.95rem;" title="{{ t.description }}">
+                        {{ t.description|truncatechars:40 }}
+                    </div>
+                    <div style="flex: 2; padding-right: 15px;">
+                        <input type="text" name="keyword" class="form-input" placeholder="Ex: Ifood" required
+                            style="width: 100%;">
+                    </div>
+                    <div style="flex: 2; padding-right: 15px;">
+                        <select name="category_id" class="form-input" required style="width: 100%;">
+                            <option value="" selected disabled>Selecionar...</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.pk }}">{{ cat.icon }} {{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="flex: 0 0 80px;">
+                        <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;">Salvar</button>
+                    </div>
+                </form>
+                {% endfor %}
+            </div>
+
+            <!-- Controles de Paginação -->
+            <div id="paginationControls"
+                style="display: flex; justify-content: space-between; align-items: center; padding: 15px 10px 0 10px; border-top: 1px solid var(--border-color); margin-top: 10px;">
+                <div id="paginationInfo" style="color: var(--text-secondary); font-size: 0.85rem;">Mostrando X de Y
+                    registros</div>
+                <div style="display: flex; gap: 5px;" id="paginationButtons">
+                    <!-- Botões gerados via JS -->
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding: 2rem; background: var(--bg-secondary); border-radius: 8px;">
+            <div class="empty-icon">🎉</div>
+            <h3>Tudo organizado!</h3>
+            <p>Não há transações recentes sem categoria.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .form-row {
+        align-items: center;
+    }
+
+    .category-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: stretch;
+        gap: 20px;
+    }
+
+    .category-column .card {
+        height: 100%;
+    }
+
+    .emoji-picker-popup {
+        display: none;
+        position: absolute;
+        z-index: 9999;
+        background: var(--bg-card, #1e2136);
+        border: 1px solid var(--border-color, #333);
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        width: 280px;
+        max-height: 260px;
+        overflow-y: auto;
+    }
+
+    .emoji-picker-popup.open {
+        display: block;
+    }
+
+    .emoji-search {
+        width: 100%;
+        margin-bottom: 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color, #444);
+        background: var(--bg-secondary, #151728);
+        color: var(--text-primary);
+        font-size: 0.85rem;
+        box-sizing: border-box;
+    }
+
+    .emoji-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+    }
+
+    .emoji-btn {
+        font-size: 1.4rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 6px;
+        transition: background 0.15s;
+        line-height: 1;
+    }
+
+    .emoji-btn:hover {
+        background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+    }
+
+    .color-picker-popup {
+        display: none;
+        position: absolute;
+        z-index: 9999;
+        background: var(--bg-card, #1e2136);
+        border: 1px solid var(--border-color, #333);
+        border-radius: 10px;
+        padding: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        width: 200px;
+    }
+
+    .color-picker-popup.open {
+        display: block;
+    }
+
+    .color-grid-custom {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .color-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .color-btn:hover {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px rgba(255, 255, 255, 0.2);
+    }
+
+    /* Paginação Classes Animação */
+    .fast-classify-row {
+        transition: opacity 0.3s ease, transform 0.3s ease, margin-top 0.3s ease, margin-bottom 0.3s ease, padding-top 0.3s ease, padding-bottom 0.3s ease, height 0.3s ease;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .fast-classify-row.hidden-row {
+        opacity: 0;
+        transform: translateY(10px);
+        pointer-events: none;
+        position: absolute;
+        visibility: hidden;
+    }
+
+    .page-btn {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+    }
+
+    .page-btn:hover:not(:disabled) {
+        background: var(--bg-hover);
+    }
+
+    .page-btn.active {
+        background: var(--primary-color, #8A05BE);
+        color: #fff;
+        border-color: var(--primary-color, #8A05BE);
+        font-weight: bold;
+    }
+
+    .page-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+</style>
+
+<!-- Popup de seleção de Cor customizado -->
+<div id="colorPickerPopup" class="color-picker-popup">
+    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600;">Selecione
+        a cor</div>
+    <div class="color-grid-custom" id="colorGrid"></div>
+</div>
+
+<!-- Popup de seleção de Emoji customizado -->
+<div id="emojiPickerPopup" class="emoji-picker-popup">
+    <input type="text" id="emojiSearch" class="emoji-search" placeholder="🔍 Buscar emoji (ex: casa, carro)...">
+    <div class="emoji-grid" id="emojiGrid"></div>
+</div>
+
+<script>
+    (function () {
+        // Mapeamento de emojis e suas palavras-chave para busca
+        const EMOJIS = [
+            { c: "😀", k: "feliz sorriso rosto happy smile" },
+            { c: "😂", k: "chorando rindo risada lol laugh" },
+            { c: "😍", k: "amor apaixonado love heart coracao apaixonada" },
+            { c: "😎", k: "oculos sol cool estilo" },
+            { c: "🤓", k: "nerd inteligente" },
+            { c: "🍕", k: "pizza comida food lanche jantar almoço" },
+            { c: "🍔", k: "hamburguer lanche fast food burger mcdonalds ifood" },
+            { c: "🍟", k: "batata frita french fries food" },
+            { c: "🍣", k: "sushi japones comida peixe" },
+            { c: "☕", k: "cafe coffee xicara bebida padaria" },
+            { c: "🍺", k: "cerveja beer bebida alcool bar balada" },
+            { c: "🍷", k: "vinho taca bebida alcool bar" },
+            { c: "🏠", k: "casa home moradia house aluguel" },
+            { c: "🏢", k: "predio escritorio office building condominio apartamento" },
+            { c: "🏥", k: "hospital saude medical medico doenca" },
+            { c: "🚗", k: "carro auto veiculo car automovel gasolina posto uber" },
+            { c: "🚌", k: "onibus bus transporte passagem" },
+            { c: "✈️", k: "aviao airplane viagem voo passagem" },
+            { c: "💳", k: "cartao cartoes credito credit card nubank faturas" },
+            { c: "💰", k: "dinheiro sacola money cash salario pix" },
+            { c: "💵", k: "dolar nota dinheiro bill cash salario" },
+            { c: "🛍️", k: "compras shopping sacola bag loja roupas" },
+            { c: "🛒", k: "carrinho supermercado mercado cart shopping compras" },
+            { c: "🏋️", k: "academia peso gym workout musculacao fit" },
+            { c: "⚽", k: "futebol bola esporte soccer futsal" },
+            { c: "🎮", k: "videogame controle jogo game pc console" },
+            { c: "🎬", k: "cinema filme claquete movie netflix prime streaming" },
+            { c: "🎵", k: "musica nota som music spotify show" },
+            { c: "💊", k: "pilula remedio farmacia saude health pill" },
+            { c: "🩺", k: "estetoscopio medico saude doctor consulta" },
+            { c: "🛠️", k: "ferramentas conserto tool fix oficina" },
+            { c: "🌱", k: "planta semente vegano arvore natureza agro" },
+            { c: "📚", k: "livros estudo escola educacao books faculdade curso" },
+            { c: "🖥️", k: "computador pc monitor desktop trabalho tech ti" },
+            { c: "💻", k: "laptop notebook pc computador ti tech trabalho" },
+            { c: "📱", k: "celular telefone smartphone mobile phone iphone ligacao" },
+            { c: "❤️", k: "coracao heart amor love namoro" },
+            { c: "🐶", k: "cachorro cao dog pet animal" },
+            { c: "🐱", k: "gato felino cat pet animal" },
+            { c: "✂️", k: "tesoura cabelo salao barbeiro" },
+            { c: "⛽", k: "posto gasolina combustivel carro gas" },
+            { c: "🐾", k: "pata animal pet shop veterinario" }
+        ];
+
+        const popup = document.getElementById('emojiPickerPopup');
+        const grid = document.getElementById('emojiGrid');
+        const search = document.getElementById('emojiSearch');
+        let activeInput = null;
+
+        function renderEmojis(list) {
+            grid.innerHTML = '';
+            list.forEach(e => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'emoji-btn';
+                btn.textContent = e.c; // Renderiza o caractere
+                btn.title = e.k; // Tooltip com as palavras-chave
+                btn.addEventListener('click', () => {
+                    if (activeInput) activeInput.value = e.c;
+                    popup.classList.remove('open');
+                });
+                grid.appendChild(btn);
+            });
+        }
+
+        renderEmojis(EMOJIS);
+
+        search.addEventListener('input', () => {
+            const q = search.value.toLowerCase().trim();
+            renderEmojis(q ? EMOJIS.filter(e => e.k.toLowerCase().includes(q)) : EMOJIS);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!popup.contains(e.target) && e.target !== activeInput) {
+                popup.classList.remove('open');
+            }
+        });
+
+        // Associar ao input de categoria
+        const iconInput = document.getElementById('categoryIcon');
+        if (iconInput) {
+            iconInput.addEventListener('click', (e) => {
+                e.stopPropagation();
+                activeInput = iconInput;
+                const rect = iconInput.getBoundingClientRect();
+                popup.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+                popup.style.left = rect.left + 'px';
+                popup.style.position = 'absolute';
+                popup.classList.toggle('open');
+                if (popup.classList.contains('open')) {
+                    search.value = '';
+                    renderEmojis(EMOJIS);
+                    setTimeout(() => search.focus(), 50);
+                }
+            });
+        }
+    })();
+
+    // Sistema de Popup Color Picker para Categorias
+    (function () {
+        const COLORS = [
+            "#8A05BE", "#FF7A00", "#00A3E0", "#00A7E1", "#A1C63A",
+            "#242424", "#00FF5F", "#EC008C", "#00843D", "#005EAD",
+            "#EC0000", "#EC7000", "#FCEC14", "#005CA9"
+        ];
+
+        const colorPopup = document.getElementById('colorPickerPopup');
+        const colorGrid = document.getElementById('colorGrid');
+        const colorInput = document.getElementById('categoryColor');
+        const colorDisplay = document.getElementById('categoryColorDisplay');
+
+        if (colorDisplay && colorInput && colorGrid) {
+            // Configura input default
+            if (!colorInput.value) colorInput.value = COLORS[0];
+            colorDisplay.style.backgroundColor = colorInput.value;
+
+            // Renderiza botoes
+            COLORS.forEach(c => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'color-btn';
+                btn.style.backgroundColor = c;
+                btn.addEventListener('click', () => {
+                    colorInput.value = c;
+                    colorDisplay.style.backgroundColor = c;
+                    colorPopup.classList.remove('open');
+                });
+                colorGrid.appendChild(btn);
+            });
+
+            // Abrir popup
+            colorDisplay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const emojiPopup = document.getElementById('emojiPickerPopup');
+                if (emojiPopup) emojiPopup.classList.remove('open'); // Fecha emoji
+
+                const rect = colorDisplay.getBoundingClientRect();
+                colorPopup.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+                colorPopup.style.left = (rect.left - 150) + 'px'; // Puxa popup p esquerda
+                colorPopup.style.position = 'absolute';
+                colorPopup.classList.toggle('open');
+            });
+
+            // Clicar fora
+            document.addEventListener('click', (e) => {
+                if (!colorPopup.contains(e.target) && e.target !== colorDisplay) {
+                    colorPopup.classList.remove('open');
+                }
+            });
+        }
+    })();
+
+    // Sistema de Paginação da Classificação Rápida
+    (function () {
+        const rows = document.querySelectorAll('.fast-classify-row');
+        if (rows.length === 0) return;
+
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        const searchInput = document.getElementById('quickClassifySearch');
+        const paginationInfo = document.getElementById('paginationInfo');
+        const paginationButtons = document.getElementById('paginationButtons');
+
+        let currentPage = 1;
+        let pageSize = parseInt(pageSizeSelect ? pageSizeSelect.value : 5);
+        let filteredRows = Array.from(rows);
+        let totalItems = filteredRows.length;
+
+        function renderPage(page, size) {
+            const start = (page - 1) * size;
+            const end = start + size;
+            let visibleCount = 0;
+
+            // Esconde todas primeiro
+            rows.forEach(row => {
+                row.classList.add('hidden-row');
+                row.style.opacity = '0';
+            });
+
+            // Mostra só os do slice filtrado
+            filteredRows.forEach((row, index) => {
+                if (index >= start && index < end) {
+                    row.classList.remove('hidden-row');
+                    setTimeout(() => row.style.opacity = '1', 10);
+                    visibleCount++;
+                }
+            });
+
+            updatePaginationUI(page, size, visibleCount, totalItems);
+        }
+
+        function updatePaginationUI(page, size, visibleCount, total) {
+            if (paginationInfo) {
+                const startCount = total === 0 ? 0 : ((page - 1) * size) + 1;
+                const endCount = startCount + visibleCount - 1;
+                paginationInfo.textContent = `Mostrando ${startCount} a ${endCount} de ${total} registros`;
+            }
+
+            if (!paginationButtons) return;
+            paginationButtons.innerHTML = '';
+
+            const totalPages = Math.ceil(total / size);
+            if (totalPages <= 1) return;
+
+            // Prev
+            const prevBtn = document.createElement('button');
+            prevBtn.type = 'button';
+            prevBtn.className = 'page-btn';
+            prevBtn.innerHTML = '&laquo;';
+            prevBtn.disabled = page === 1;
+            prevBtn.addEventListener('click', () => {
+                currentPage--;
+                renderPage(currentPage, pageSize);
+            });
+            paginationButtons.appendChild(prevBtn);
+
+            let startPage = Math.max(1, page - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `page-btn ${i === page ? 'active' : ''}`;
+                btn.textContent = i;
+                btn.addEventListener('click', () => {
+                    currentPage = i;
+                    renderPage(currentPage, pageSize);
+                });
+                paginationButtons.appendChild(btn);
+            }
+
+            // Next
+            const nextBtn = document.createElement('button');
+            nextBtn.type = 'button';
+            nextBtn.className = 'page-btn';
+            nextBtn.innerHTML = '&raquo;';
+            nextBtn.disabled = page === totalPages;
+            nextBtn.addEventListener('click', () => {
+                currentPage++;
+                renderPage(currentPage, pageSize);
+            });
+            paginationButtons.appendChild(nextBtn);
+        }
+
+        if (pageSizeSelect) {
+            pageSizeSelect.addEventListener('change', (e) => {
+                pageSize = parseInt(e.target.value);
+                currentPage = 1;
+                renderPage(currentPage, pageSize);
+            });
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                let query = e.target.value.toLowerCase().trim();
+
+                if (query.length >= 3 || query.length === 0) {
+                    if (query.length === 0) {
+                        filteredRows = Array.from(rows);
+                    } else {
+                        filteredRows = Array.from(rows).filter(row => {
+                            // O div de descrição é o único com atributo [title]
+                            const descDiv = row.querySelector('[title]');
+                            if (!descDiv) return false;
+                            return descDiv.textContent.toLowerCase().includes(query) ||
+                                descDiv.getAttribute('title').toLowerCase().includes(query);
+                        });
+                    }
+                    totalItems = filteredRows.length;
+                    currentPage = 1;
+                    renderPage(currentPage, pageSize);
+                }
+            });
+        }
+
+        // Init
+        renderPage(currentPage, pageSize);
+    })();
+
+    // Manter a posição do scroll ao recarregar a página após salvar
+    document.addEventListener('DOMContentLoaded', function () {
+        // Restaurar posição do scroll se existir
+        const scrollPos = sessionStorage.getItem('categoryScrollPos');
+        if (scrollPos) {
+            window.scrollTo(0, parseInt(scrollPos));
+            sessionStorage.removeItem('categoryScrollPos');
+        }
+
+        // Salvar posição do scroll ao enviar qualquer formulário
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function () {
+                sessionStorage.setItem('categoryScrollPos', window.scrollY);
+            });
+        });
+    });
+</script>
+{% endblock %}

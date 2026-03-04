@@ -1,0 +1,340 @@
+{% extends 'invoices/base.html' %}
+{% load static %}
+
+{% block title %}Cartões - Hub Financeiro{% endblock %}
+{% block topbar_title %}Cartões de Crédito{% endblock %}
+
+{% block content %}
+<style>
+    .cards-page-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .cards-panel {
+        height: 100%;
+    }
+
+    .cards-form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-bottom: 2rem;
+    }
+
+    .cards-form-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 1rem;
+    }
+
+    .cards-form-label {
+        width: 160px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .cards-form-field {
+        flex: 1;
+        max-width: 400px;
+        position: relative;
+    }
+
+    .cards-form-field-sm {
+        flex: 1;
+        max-width: 85px;
+    }
+
+    .cards-colors {
+        flex: 1;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        max-width: 400px;
+    }
+
+    .cards-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 10px;
+    }
+
+    .cards-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .cards-item-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .cards-item-dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .cards-item-name {
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    @media (max-width: 1024px) {
+        .cards-page-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .cards-form-row {
+            flex-direction: column;
+            align-items: stretch;
+            margin-bottom: 0.8rem;
+        }
+
+        .cards-form-label {
+            width: 100%;
+        }
+
+        .cards-form-field,
+        .cards-colors {
+            max-width: 100%;
+        }
+
+        .cards-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+    }
+</style>
+
+<div>
+    <div class="cards-page-layout">
+        <!-- Container esquerdo: formulário -->
+        <div class="cards-panel">
+            <div class="card fade-in-up" style="animation-delay: 0.1s;">
+                <h2 class="card-title">➕ Novo Cartão</h2>
+
+                <form method="post" id="addCardForm" class="cards-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_card">
+
+                    <div class="cards-form-row">
+                        <label for="{{ form.name.id_for_label }}" class="cards-form-label">Nome do Cartão:</label>
+                        <div class="cards-form-field">
+                            {{ form.name }}
+                            <small id="nameError" class="text-danger"
+                                style="color: var(--danger-color); display: none; margin-top: 5px; font-weight: 500;">Este
+                                cartão já foi cadastrado ou o nome é inválido.</small>
+                        </div>
+                    </div>
+
+                    <div class="cards-form-row">
+                        <label for="{{ form.bank.id_for_label }}" class="cards-form-label">Instituição/Banco:</label>
+                        <div class="cards-form-field">
+                            {{ form.bank }}
+                        </div>
+                    </div>
+
+                    <div class="cards-form-row">
+                        <label for="{{ form.closing_day.id_for_label }}" class="cards-form-label">Dia de
+                            Fechamento:</label>
+                        <div class="cards-form-field-sm">
+                            {{ form.closing_day }}
+                        </div>
+                    </div>
+
+                    <div class="cards-form-row">
+                        <label for="{{ form.color.id_for_label }}" class="cards-form-label">Cor de Destaque:</label>
+                        <div class="cards-colors">
+                            <div style="display: none;">{{ form.color }}</div>
+                            <div class="color-preset" data-color="#8A05BE"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #8A05BE; cursor: pointer; transition: all 0.2s;"
+                                title="Nubank"></div>
+                            <div class="color-preset" data-color="#FF7A00"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #FF7A00; cursor: pointer; transition: all 0.2s;"
+                                title="Banco Inter"></div>
+                            <div class="color-preset" data-color="#00A3E0"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #00A3E0; cursor: pointer; transition: all 0.2s;"
+                                title="Banco PAN"></div>
+                            <div class="color-preset" data-color="#00A7E1"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #00A7E1; cursor: pointer; transition: all 0.2s;"
+                                title="Neon"></div>
+                            <div class="color-preset" data-color="#A1C63A"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #A1C63A; cursor: pointer; transition: all 0.2s;"
+                                title="PagBank"></div>
+                            <div class="color-preset" data-color="#242424"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #242424; cursor: pointer; transition: all 0.2s;"
+                                title="C6 Bank"></div>
+                            <div class="color-preset" data-color="#00FF5F"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #00FF5F; cursor: pointer; transition: all 0.2s;"
+                                title="Next"></div>
+                            <div class="color-preset" data-color="#EC008C"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #EC008C; cursor: pointer; transition: all 0.2s;"
+                                title="iti"></div>
+                            <div class="color-preset" data-color="#00843D"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #00843D; cursor: pointer; transition: all 0.2s;"
+                                title="Banco Original"></div>
+                            <div class="color-preset" data-color="#005EAD"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #005EAD; cursor: pointer; transition: all 0.2s;"
+                                title="Agibank"></div>
+                            <div class="color-preset" data-color="#EC0000"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #EC0000; cursor: pointer; transition: all 0.2s;"
+                                title="Santander / Bradesco"></div>
+                            <div class="color-preset" data-color="#EC7000"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #EC7000; cursor: pointer; transition: all 0.2s;"
+                                title="Itaú"></div>
+                            <div class="color-preset" data-color="#FCEC14"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #FCEC14; cursor: pointer; transition: all 0.2s;"
+                                title="Banco do Brasil"></div>
+                            <div class="color-preset" data-color="#005CA9"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #005CA9; cursor: pointer; transition: all 0.2s;"
+                                title="Caixa Econômica"></div>
+                        </div>
+                    </div>
+
+                    <div class="cards-actions">
+                        <button type="submit" id="addCardSubmitBtn" class="btn btn-primary"
+                            style="padding: 10px 30px;">Salvar Cartão</button>
+                    </div>
+
+                    {% if form.errors %}
+                    <div class="form-errors" style="width: 100%;">
+                        {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                        <p class="form-error" style="color: var(--danger-color);">{{ error }}</p>
+                        {% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+
+        <!-- Container direito: lista de cartões -->
+        <div class="cards-panel">
+            <div class="card fade-in-up" style="animation-delay: 0.2s;">
+                <h2 class="card-title">💳 Meus Cartões</h2>
+
+                {% if cards %}
+                <div class="items-list">
+                    {% for card in cards %}
+                    <div class="cards-item">
+                        <div class="cards-item-info">
+                            <span class="cards-item-dot" style="background: {{ card.color }};"></span>
+                            <span class="cards-item-name">{{ card.name }}</span>
+                            <span class="badge badge-purple" style="font-size: 0.85rem;">{{ card.bank }}</span>
+                            <span class="badge badge-cyan">Dia {{ card.closing_day }}</span>
+                        </div>
+                        <form method="post" class="inline-form"
+                            onsubmit="return confirm('ATENÇÃO: Deletar o cartão \'{{ card.name }}\' apagará TODAS as faturas e transações vinculadas a ele. Tem certeza?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_card">
+                            <input type="hidden" name="card_id" value="{{ card.pk }}">
+                            <button type="submit" class="btn btn-danger-ghost btn-sm" title="Deletar">Excluir</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state"
+                    style="text-align: center; padding: 3rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <div class="empty-icon" style="font-size: 3rem; margin-bottom: 1rem;">💳</div>
+                    <h3>Nenhum cartão cadastrado</h3>
+                    <p class="text-secondary">Adicione seu primeiro cartão de crédito usando o formulário ao lado para
+                        começar.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Lista de nomes de cartões já cadastrados (case-insensitive)
+        const existingCards = [];
+        {% for card in cards %}
+        existingCards.push("{{ card.name|escapejs }}".toLowerCase());
+        {% endfor %}
+
+        const nameInput = document.getElementById('id_name');
+        const submitBtn = document.getElementById('addCardSubmitBtn');
+        const nameError = document.getElementById('nameError');
+
+        if (nameInput) {
+            nameInput.addEventListener('input', function () {
+                const val = this.value.trim().toLowerCase();
+
+                // Validação de nomes vazios ou existentes
+                if (existingCards.includes(val)) {
+                    this.style.borderColor = 'var(--danger-color)';
+                    this.style.boxShadow = '0 0 0 3px rgba(255, 90, 95, 0.2)';
+                    if (nameError) nameError.style.display = 'block';
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.style.opacity = '0.5';
+                        submitBtn.style.cursor = 'not-allowed';
+                    }
+                } else {
+                    this.style.borderColor = '';
+                    this.style.boxShadow = '';
+                    if (nameError) nameError.style.display = 'none';
+                    if (val.length > 0 && submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.style.opacity = '1';
+                        submitBtn.style.cursor = 'pointer';
+                    } else if (submitBtn) {
+                        // Se estiver vazio, desabilita também (opcional)
+                        submitBtn.disabled = true;
+                        submitBtn.style.opacity = '0.5';
+                        submitBtn.style.cursor = 'not-allowed';
+                    }
+                }
+            });
+
+            // Disparar evento inicial caso haja valor pré-preenchido
+            nameInput.dispatchEvent(new Event('input'));
+        }
+
+        // Lógica dos seletores de cores personalizados
+        const colorInput = document.querySelector('input[type="color"]');
+        const colorPresets = document.querySelectorAll('.color-preset');
+
+        if (colorInput && colorPresets.length > 0) {
+            colorPresets.forEach(preset => {
+                preset.addEventListener('click', function () {
+                    // Atualiza o input escondido
+                    colorInput.value = this.getAttribute('data-color');
+
+                    // Remove estado 'ativo' de todos e reseta estilos
+                    colorPresets.forEach(p => {
+                        p.style.transform = 'scale(1)';
+                        p.style.boxShadow = 'none';
+                    });
+
+                    // Adiciona estilo ativo ao clicado
+                    this.style.transform = 'scale(1.15)';
+                    this.style.boxShadow = '0 0 0 3px var(--bg-primary), 0 0 0 5px var(--accent-cyan)';
+                });
+            });
+
+            // Seleção inicial (aplica o default no primeiro elemento)
+            colorPresets[0].click();
+        }
+    });
+</script>
+{% endblock %}

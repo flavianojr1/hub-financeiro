@@ -1,0 +1,55 @@
+{% extends 'invoices/base.html' %}
+{% block topbar_title %}Meu Perfil{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px;">
+    <div class="card fade-in-up" style="animation-delay: 0.1s;">
+        <h2 class="card-title">Editar Perfil</h2>
+
+        <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-error">
+                {% for error in form.non_field_errors %}
+                {{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% for field in form %}
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="{{ field.id_for_label }}"
+                    style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">
+                    {{ field.label }}
+                </label>
+                <input type="{{ field.field.widget.input_type|default:'text' }}" name="{{ field.name }}"
+                    id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}" class="form-control"
+                    style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-primary);">
+
+                {% if field.help_text %}
+                <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                    {{ field.help_text|safe }}
+                </small>
+                {% endif %}
+
+                {% if field.errors %}
+                <span style="color: var(--accent-pink); font-size: 0.9em; display: block; margin-top: 4px;">
+                    {{ field.errors.0 }}
+                </span>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div style="margin-top: 2rem; display: flex; gap: 1rem; align-items: center;">
+                <button type="submit" class="btn btn-primary">
+                    💾 Salvar Alterações
+                </button>
+                <a href="{% url 'password_change' %}" class="btn btn-secondary">
+                    🔒 Alterar Senha
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

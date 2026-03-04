@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+set -eu
+
+# Block sensitive/local files from being committed.
+blocked_path_regex='(^|/)(\.env(\..*)?|db\.sqlite3|.*\.sqlite3|.*\.pem|.*\.key|id_rsa|id_ed25519|\.venv/|venv/|env/|staticfiles/|\.claude/.*\.local\.json)$'
+
+staged_files="$(git diff --cached --name-only)"
+
+if [ -n "${staged_files}" ]; then
+  echo "$staged_files" | while IFS= read -r f; do
+    if echo "$f" | grep -Eiq "$blocked_path_regex"; then
+      echo "ERROR: arquivo sensivel/local detectado no commit: $f"
+      echo "Remova do stage com: git restore --staged \"$f\""
+      exit 1
+    fi
+  done
+fi
+
+# Scan staged diff for common secret patterns (ignore the hook file itself).
+staged_for_secret_scan="$(git diff --cached --name-only | grep -Eiv '^\.githooks/pre-commit$' || true)"
+if [ -n "${staged_for_secret_scan}" ]; then
+  # Match likely real secrets instead of generic keywords to reduce false positives.
+  if git diff --cached -U0 -- ${staged_for_secret_scan} | grep -Eiq "(\+.*(SECRET_KEY\\s*=\\s*['\\\"][^'\\\"]{20,}['\\\"]|API_KEY\\s*=\\s*['\\\"][^'\\\"]{12,}['\\\"]|ACCESS_KEY\\s*=\\s*['\\\"][^'\\\"]{12,}['\\\"]|TOKEN\\s*=\\s*['\\\"][^'\\\"]{12,}['\\\"]|PASSWORD\\s*=\\s*['\\\"][^'\\\"]{8,}['\\\"]|BEGIN [A-Z ]*PRIVATE KEY|sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|postgres://[^ ]+))"; then
+    echo "ERROR: possivel segredo detectado no diff staged."
+    echo "Revise com: git diff --cached"
+    exit 1
+  fi
+fi
+
+exit 0

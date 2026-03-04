@@ -1,0 +1,402 @@
+{% extends 'base_public.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* PALETA DE CORES E VARIÁVEIS 
+       Sargento 85kg aprovou este design. Disciplina visual!
+    */
+    :root {
+        --primary: #667eea;
+        --primary-dark: #764ba2;
+        --primary-hover: #5a6fd1;
+        --accent-pink: #f5576c;
+        --accent-cyan: #4facfe;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --bg-dark: #0a0e27;
+        --bg-dark-soft: #141933;
+        --card-bg: #1a1f3a;
+        --text-main: #ffffff;
+        --text-sec: #a0aec0;
+        --grad-main: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --grad-pink: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --grad-cyan: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Inter', -apple-system, sans-serif;
+    }
+
+    body {
+        background-color: var(--bg-dark);
+        color: var(--text-main);
+        line-height: 1.6;
+        overflow-x: hidden;
+        scroll-behavior: smooth;
+    }
+
+    /* HEADER FIXO */
+    header {
+        position: fixed;
+        top: 0;
+        width: 100%;
+        padding: 1.25rem 5%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 1000;
+        transition: 0.3s;
+    }
+
+    header.scrolled {
+        background: rgba(10, 14, 39, 0.85);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .logo {
+        font-size: 1.5rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        color: #fff;
+    }
+
+    nav {
+        display: flex;
+        gap: 2rem;
+    }
+
+    nav a {
+        text-decoration: none;
+        color: var(--text-sec);
+        font-weight: 500;
+        transition: 0.3s;
+    }
+
+    nav a:hover {
+        color: var(--primary);
+    }
+
+    .auth-buttons {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: 0.3s ease;
+        cursor: pointer;
+        border: none;
+    }
+
+    .btn-outline {
+        border: 2px solid var(--primary);
+        color: var(--text-main);
+    }
+
+    .btn-outline:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-grad {
+        background: var(--grad-main);
+        color: white;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-grad:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.1);
+    }
+
+    /* HERO SECTION */
+    .hero {
+        padding: 180px 5% 100px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        position: relative;
+    }
+
+    .hero-badge {
+        background: rgba(102, 126, 234, 0.1);
+        color: var(--primary);
+        padding: 6px 16px;
+        border-radius: 24px;
+        font-size: 0.875rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+    }
+
+    .hero h1 {
+        font-size: clamp(2.5rem, 5vw, 4rem);
+        max-width: 900px;
+        margin-bottom: 1.5rem;
+        line-height: 1.1;
+    }
+
+    .hero p {
+        color: var(--text-sec);
+        font-size: 1.25rem;
+        max-width: 600px;
+        margin-bottom: 2.5rem;
+    }
+
+    .hero-mockup {
+        width: 100%;
+        max-width: 1000px;
+        background: var(--card-bg);
+        border-radius: 24px;
+        padding: 20px;
+        border: 1px solid rgba(255,255,255,0.06);
+        box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        margin-top: 4rem;
+        position: relative;
+    }
+
+    .mockup-header {
+        height: 30px;
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+    .circle { width: 12px; height: 12px; border-radius: 50%; background: #444; }
+
+    /* GRID FUNCIONALIDADES */
+    .features {
+        padding: 100px 5%;
+    }
+
+    .section-title {
+        text-align: center;
+        margin-bottom: 4rem;
+    }
+
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+
+    .card {
+        background: var(--card-bg);
+        padding: 2.5rem;
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.06);
+        transition: 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-8px);
+        border-color: var(--primary);
+    }
+
+    .card-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1.5rem;
+        display: block;
+    }
+
+    /* COMO FUNCIONA */
+    .how-it-works {
+        padding: 100px 5%;
+        background: var(--bg-dark-soft);
+    }
+
+    .steps {
+        display: flex;
+        justify-content: center;
+        gap: 3rem;
+        flex-wrap: wrap;
+        margin-top: 4rem;
+    }
+
+    .step {
+        flex: 1;
+        min-width: 250px;
+        text-align: center;
+        position: relative;
+    }
+
+    .step-number {
+        width: 50px;
+        height: 50px;
+        background: var(--grad-main);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        font-weight: 800;
+    }
+
+    /* CTA FINAL */
+    .cta-final {
+        padding: 100px 5%;
+        text-align: center;
+        background: var(--grad-main);
+        margin: 5% 5% 0;
+        border-radius: 24px;
+    }
+
+    .cta-final h2 {
+        font-size: 2.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    footer {
+        padding: 80px 5% 40px;
+        text-align: center;
+        color: var(--text-sec);
+        font-size: 0.9rem;
+    }
+
+    /* RESPONSIVIDADE */
+    @media (max-width: 768px) {
+        nav { display: none; }
+        .hero h1 { font-size: 2.5rem; }
+        .steps { flex-direction: column; }
+    }
+</style>
+
+<header id="mainHeader">
+    <a href="/" class="logo">📊 Hub Financeiro</a>
+    <nav>
+        <a href="#features">Funcionalidades</a>
+        <a href="#how">Como Funciona</a>
+        <a href="#start">Começar</a>
+    </nav>
+    <div class="auth-buttons">
+        {% if user.is_authenticated %}
+            <a href="/dashboard/" class="btn btn-grad">Ir para o Dashboard</a>
+        {% else %}
+            <a href="/accounts/login/" class="btn btn-outline">Entrar</a>
+            <a href="/accounts/signup/" class="btn btn-grad">Cadastrar</a>
+        {% endif %}
+    </div>
+</header>
+
+<section class="hero">
+    <div class="hero-badge">✨ 100% gratuito para usuários Nubank</div>
+    <h1>Controle total das suas finanças Nubank</h1>
+    <p>Importe seu CSV, categorize transações automaticamente e visualize seu futuro financeiro com gráficos inteligentes.</p>
+    
+    <div class="auth-buttons">
+        {% if user.is_authenticated %}
+            <a href="/dashboard/" class="btn btn-grad" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Acessar Dashboard</a>
+        {% else %}
+            <a href="/accounts/signup/" class="btn btn-grad" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Começar Agora — é grátis</a>
+            <a href="#" class="btn btn-outline" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Ver Demo</a>
+        {% endif %}
+    </div>
+
+    <div class="hero-mockup">
+        <div class="mockup-header">
+            <div class="circle" style="background: #ff5f56;"></div>
+            <div class="circle" style="background: #ffbd2e;"></div>
+            <div class="circle" style="background: #27c93f;"></div>
+        </div>
+        <!-- Simulação de Gráfico em CSS -->
+        <div style="height: 300px; display: flex; align-items: flex-end; justify-content: space-around; padding: 20px;">
+            <div style="width: 15%; height: 40%; background: var(--grad-main); border-radius: 8px 8px 0 0;"></div>
+            <div style="width: 15%; height: 65%; background: var(--grad-pink); border-radius: 8px 8px 0 0;"></div>
+            <div style="width: 15%; height: 90%; background: var(--grad-cyan); border-radius: 8px 8px 0 0;"></div>
+            <div style="width: 15%; height: 55%; background: var(--grad-main); border-radius: 8px 8px 0 0;"></div>
+            <div style="width: 15%; height: 75%; background: var(--grad-pink); border-radius: 8px 8px 0 0;"></div>
+        </div>
+    </div>
+</section>
+
+<section class="features" id="features">
+    <div class="section-title">
+        <h2 style="font-size: 2.5rem;">Funcionalidades de Elite</h2>
+        <p style="color: var(--text-sec);">Tudo o que você precisa para dominar seus gastos.</p>
+    </div>
+    <div class="feature-grid">
+        <div class="card">
+            <span class="card-icon">📊</span>
+            <h3>Gráficos Detalhados</h3>
+            <p style="color: var(--text-sec); margin-top: 1rem;">Visualize gastos por categoria e evolução mensal com gráficos interativos movidos a Chart.js.</p>
+        </div>
+        <div class="card">
+            <span class="card-icon">🏷️</span>
+            <h3>Auto-categorização</h3>
+            <p style="color: var(--text-sec); margin-top: 1rem;">Crie regras inteligentes por palavras-chave para classificar suas compras automaticamente.</p>
+        </div>
+        <div class="card">
+            <span class="card-icon">🔮</span>
+            <h3>Previsão de Parcelas</h3>
+            <p style="color: var(--text-sec); margin-top: 1rem;">O sistema identifica compras parceladas (ex: 2/10) e projeta seus gastos para os próximos meses.</p>
+        </div>
+    </div>
+</section>
+
+<section class="how-it-works" id="how">
+    <div class="section-title">
+        <h2 style="font-size: 2.5rem;">Como Funciona</h2>
+    </div>
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <h3>Importe o CSV</h3>
+            <p style="color: var(--text-sec);">Baixe a fatura no app do Nubank e suba o arquivo aqui.</p>
+        </div>
+        <div class="step">
+            <div class="step-number">2</div>
+            <h3>Processamento</h3>
+            <p style="color: var(--text-sec);">Nossa IA categoriza tudo instantaneamente para você.</p>
+        </div>
+        <div class="step">
+            <div class="step-number">3</div>
+            <h3>Domine seus Dados</h3>
+            <p style="color: var(--text-sec);">Analise insights e economize dinheiro de verdade.</p>
+        </div>
+    </div>
+</section>
+
+<div class="cta-final" id="start">
+    <h2>Pronto para ter controle das suas finanças?</h2>
+    <p style="margin-bottom: 2rem; opacity: 0.9;">Junte-se a centenas de usuários que já organizaram a vida financeira em 2026.</p>
+    {% if user.is_authenticated %}
+        <a href="/dashboard/" class="btn btn-outline" style="background: white; color: var(--primary-dark); padding: 1.2rem 3rem;">Acessar meu Dashboard</a>
+    {% else %}
+        <a href="/accounts/signup/" class="btn btn-outline" style="background: white; color: var(--primary-dark); padding: 1.2rem 3rem;">Criar conta gratuita</a>
+    {% endif %}
+</div>
+
+<footer>
+    <p>📊 Hub Financeiro — Gestão Inteligente para Nubank</p>
+    <div style="margin: 1.5rem 0; display: flex; justify-content: center; gap: 2rem;">
+        <a href="#" style="color: var(--text-sec); text-decoration: none;">GitHub</a>
+        <a href="/accounts/login/" style="color: var(--text-sec); text-decoration: none;">Entrar</a>
+        <a href="/accounts/signup/" style="color: var(--text-sec); text-decoration: none;">Cadastrar</a>
+    </div>
+    <p>© 2026 Hub Financeiro. Sem desculpas para a sua conta bancária.</p>
+</footer>
+
+<script>
+    // Efeito de scroll no header
+    window.addEventListener('scroll', () => {
+        const header = document.getElementById('mainHeader');
+        if (window.scrollY > 50) {
+            header.classList.add('scrolled');
+        } else {
+            header.classList.remove('scrolled');
+        }
+    });
+</script>
+{% endblock %}

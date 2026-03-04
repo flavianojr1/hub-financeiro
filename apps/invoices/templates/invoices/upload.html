@@ -1,0 +1,231 @@
+{% extends 'invoices/base.html' %}
+{% load static %}
+
+{% block title %}Upload de Fatura - Hub Financeiro{% endblock %}
+{% block topbar_title %}Upload de Fatura{% endblock %}
+
+{% block content %}
+<style>
+    .upload-layout {
+        display: grid;
+        grid-template-columns: 3fr 2fr;
+        gap: var(--spacing-md);
+        align-items: start;
+    }
+
+    .upload-card {
+        margin-bottom: 0;
+    }
+
+    .upload-form {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .upload-card-selector-hint {
+        margin-top: var(--spacing-xs);
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        flex-wrap: wrap;
+    }
+
+    .upload-card-link-btn {
+        padding: 0.35rem 0.65rem;
+        font-size: 0.78rem;
+    }
+
+    .upload-drop-title {
+        margin-bottom: 0.35rem;
+        font-size: 1.05rem;
+    }
+
+    .upload-drop-subtitle {
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .upload-area-compact {
+        padding: 1.5rem;
+    }
+
+    .upload-area-compact .upload-icon {
+        font-size: 2.2rem;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .upload-file-name {
+        margin-top: var(--spacing-sm);
+        color: var(--accent-cyan);
+        font-weight: 600;
+    }
+
+    .upload-submit {
+        width: 100%;
+    }
+
+    .upload-info-list {
+        margin-top: var(--spacing-sm);
+        padding-left: 1.1rem;
+        color: var(--text-secondary);
+        line-height: 1.7;
+    }
+
+    .upload-info-note {
+        margin-top: var(--spacing-md);
+        padding: var(--spacing-sm);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-color);
+        background: var(--bg-hover);
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    @media (max-width: 1024px) {
+        .upload-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+<div>
+    <div class="upload-layout">
+        <div class="card upload-card fade-in-up" style="animation-delay: 0.1s;">
+            <h2 class="card-title">Enviar Arquivo</h2>
+            <form method="post" enctype="multipart/form-data" id="uploadForm" class="upload-form">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="creditCard" class="form-label">Qual cartão de crédito?</label>
+                    {{ form.credit_card }}
+                    {% if not has_cards %}
+                    <div class="alert alert-error" style="position: static; margin-top: var(--spacing-sm);">
+                        Nenhum cartão cadastrado. Cadastre um cartão para habilitar o upload.
+                    </div>
+                    {% endif %}
+                    <div class="upload-card-selector-hint">
+                        <span>Não achou seu cartão?</span>
+                        <a href="{% url 'card_manage' %}" class="btn btn-primary btn-xs upload-card-link-btn">Cadastre
+                            aqui</a>
+                    </div>
+                </div>
+
+                <div class="upload-area upload-area-compact" id="uploadArea">
+                    <div class="upload-icon">CSV</div>
+                    <h3 class="upload-drop-title">Arraste seu arquivo CSV aqui</h3>
+                    <p class="text-secondary upload-drop-subtitle">ou clique para selecionar</p>
+                    <input type="file" name="csv_file" id="csvFile" class="file-input" accept=".csv" required>
+                    <label for="csvFile" class="btn btn-primary">Selecionar Arquivo</label>
+                    <div id="fileName" class="upload-file-name"></div>
+                </div>
+
+                {% if form.csv_file.errors %}
+                <div class="alert alert-error" style="position: static;">
+                    {% for error in form.csv_file.errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if not has_cards %}
+                <button type="submit" class="btn btn-primary upload-submit" id="submitBtn" disabled>
+                    <span id="submitText">Processar Fatura</span>
+                    <span id="loadingText" style="display: none;">
+                        <span class="loading"></span> Processando...
+                    </span>
+                </button>
+                {% else %}
+                <button type="submit" class="btn btn-primary upload-submit" id="submitBtn">
+                    <span id="submitText">Processar Fatura</span>
+                    <span id="loadingText" style="display: none;">
+                        <span class="loading"></span> Processando...
+                    </span>
+                </button>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="card upload-card fade-in-up" style="animation-delay: 0.2s;">
+            <h2 class="card-title">Formato do CSV</h2>
+            <p class="text-secondary">
+                O arquivo deve conter as colunas: <strong>data</strong>, <strong>descrição</strong> e
+                <strong>valor</strong>.
+            </p>
+            <ul class="upload-info-list">
+                <li>Baixe o CSV no app do Nubank, dentro da área de faturas.</li>
+                <li>Selecione o cartão correto antes de enviar o arquivo.</li>
+                <li>Use um arquivo por envio para manter o histórico organizado.</li>
+            </ul>
+            <div class="upload-info-note">
+                Nesta versão, o upload está otimizado para o formato CSV do Nubank. Em uma próxima etapa, vamos aceitar
+                outros layouts de CSV com conversão automática para o padrão do projeto.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('csvFile');
+    const fileName = document.getElementById('fileName');
+    const uploadForm = document.getElementById('uploadForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.remove('dragover');
+        }, false);
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        handleFiles(files);
+    }, false);
+
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+
+    function handleFiles(files) {
+        if (files.length > 0) {
+            const file = files[0];
+            fileName.textContent = `OK ${file.name} (${formatBytes(file.size)})`;
+        }
+    }
+
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    uploadForm.addEventListener('submit', () => {
+        document.getElementById('submitText').style.display = 'none';
+        document.getElementById('loadingText').style.display = 'inline-flex';
+        submitBtn.disabled = true;
+    });
+</script>
+{% endblock %}

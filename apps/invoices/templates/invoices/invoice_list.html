@@ -1,0 +1,143 @@
+{% extends 'invoices/base.html' %}
+{% load static %}
+
+{% block title %}Faturas - Hub Financeiro{% endblock %}
+{% block topbar_title %}Minhas Faturas{% endblock %}
+
+{% block content %}
+<style>
+    .inv-row {
+        display: grid;
+        grid-template-columns: 28px 180px 110px 120px 160px 1fr auto;
+        gap: 15px;
+        align-items: center;
+        padding: 8px 15px;
+        margin-bottom: 0px;
+    }
+
+    .inv-period {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-primary);
+    }
+
+    .inv-name {
+        font-size: 0.85rem;
+        color: var(--text-primary);
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 110px;
+    }
+
+    .inv-badge {
+        font-size: 0.70rem;
+        padding: 2px 6px;
+    }
+
+    .inv-label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-right: 4px;
+    }
+
+    .inv-val,
+    .inv-total {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-primary);
+    }
+
+    .inv-date {
+        font-weight: 500;
+        font-size: 0.80rem;
+        color: var(--text-secondary);
+    }
+
+    .inv-icon-box {
+        width: 28px;
+        height: 28px;
+        background: var(--bg-secondary);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+    }
+</style>
+<div style="margin-bottom: 1rem;">
+    <a href="{% url 'upload' %}" class="btn btn-primary" style="padding: 10px 20px;">
+        <i class="fi fi-br-file-upload"></i> Nova Fatura
+    </a>
+</div>
+
+{% if invoices %}
+<div class="invoices-list fade-in-up" style="display: flex; flex-direction: column; gap: 12px; animation-delay: 0.1s;">
+    {% for invoice in invoices %}
+    <div class="card inv-row">
+
+        <!-- 1. Ícone -->
+        <div class="inv-icon-box"><i class="fi fi-br-calendar"></i></div>
+
+        <!-- 2. Cartão e Fechamento -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+            {% if invoice.credit_card %}
+            <span
+                style="background: {{ invoice.credit_card.color }}; min-width: 8px; height: 8px; border-radius: 50%; display: inline-block;"></span>
+            <span class="inv-name">{{ invoice.credit_card.name }}</span>
+            <span class="badge badge-cyan inv-badge">Dia {{ invoice.credit_card.closing_day }}</span>
+            {% else %}
+            <span class="inv-name" style="color: var(--text-secondary);">Sem Cartão</span>
+            {% endif %}
+        </div>
+
+        <!-- 3. Período -->
+        <div class="inv-period">{{ invoice.period_display }}</div>
+
+        <!-- 4. Transações -->
+        <div style="display: flex; align-items: center;">
+            <span class="inv-label">Transações:</span>
+            <span class="inv-val">{{ invoice.transaction_count|default:"0" }}</span>
+        </div>
+
+        <!-- 5. Total -->
+        <div style="display: flex; align-items: center;">
+            <span class="inv-label">Total:</span>
+            <span class="inv-total">R$ {{ invoice.total_amount|floatformat:2|default:"0.00" }}</span>
+        </div>
+
+        <!-- 6. Envio -->
+        <div class="inv-date" style="text-align: right;">Enviado em {{ invoice.uploaded_at|date:"d/m/Y H:i" }}
+        </div>
+
+        <!-- 7. Ações -->
+        <div style="display: flex; gap: 4px;">
+            <a href="{% url 'invoice_update' invoice.pk %}" class="btn btn-secondary" title="Atualizar fatura"
+                style="padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; background: transparent; border: 1px solid transparent; color: var(--accent-cyan);">
+                <i class="fi fi-br-rotate-right"></i>
+            </a>
+            <form method="post" action="{% url 'invoice_delete' invoice.pk %}" class="inline-form"
+                onsubmit="return confirm('Tem certeza que deseja deletar esta fatura e todas as suas transações?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger-ghost" title="Deletar fatura"
+                    style="padding: 4px 8px; border-radius: 6px; font-size: 0.85rem;">
+                    <i class="fi fi-br-trash"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state fade-in-up" style="animation-delay: 0.1s;">
+    <div class="empty-icon">📂</div>
+    <h2>Nenhuma fatura encontrada</h2>
+    <p>Faça upload da sua primeira fatura para começar</p>
+    <a href="{% url 'upload' %}" class="btn btn-primary">
+        📤 Fazer Upload
+    </a>
+</div>
+{% endif %}
+</div>
+{% endblock %}

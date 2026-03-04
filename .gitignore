@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+env/
+.venv/
+.tmp/
+
+# Django
+db.sqlite3
+*.log
+media/
+staticfiles/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.agent/
+.agents/
+.codex/
+.claude/settings.local.json
+.claude/*.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets (CRITICAL)
+.env
+.env.*
+! .env.example
+secrets.local.env
+secrets.json
+settings.json
+
+# Protocolos de Trabalho (IA)
+AGENTS.md
+CLAUDE.md
+CODEX.md
+TODO.md
+GEMINI.md
+.planning/

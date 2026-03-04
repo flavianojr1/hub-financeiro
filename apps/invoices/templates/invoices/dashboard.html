@@ -1,0 +1,352 @@
+{% extends 'invoices/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Análise de Faturas{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    .dashboard-filters {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 1rem;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .filter-select {
+        max-width: 200px;
+    }
+</style>
+<div>
+    <!-- Cabeçalho com dropdown de mês -->
+    <div class="page-header-row">
+        <div>
+            <h1 class="page-title">{% if filtered %}📅 {{ selected_label }}{% else %}Dashboard de Análise{% endif %}
+            </h1>
+            <p class="page-subtitle">{% if filtered %}Análise filtrada por mês{% else %}Visualize e analise seus gastos
+                do Nubank{% endif %}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card transactions">
+        <div class="stat-header">
+            <div class="stat-icon-wrapper">
+                <i class="fi fi-br-credit-card"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Total de Transações (Mês Atual)</div>
+                <div class="stat-value" id="kpi-total-transactions">{{ stats_current_month.total_transactions }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card amount">
+        <div class="stat-header">
+            <div class="stat-icon-wrapper">
+                <i class="fi fi-br-coins"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Total Gasto (Mês Atual)</div>
+                <div class="stat-value" id="kpi-total-amount">R$ {{ stats_current_month.total_amount|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card invoices">
+        <div class="stat-header">
+            <div class="stat-icon-wrapper">
+                <i class="fi fi-br-file"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Faturas Importadas</div>
+                <div class="stat-value">{{ stats.total_invoices }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card avg">
+        <div class="stat-header">
+            <div class="stat-icon-wrapper">
+                <i class="fi fi-br-chart-pie"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Média por Transação</div>
+                <div class="stat-value" id="kpi-avg-amount">R$ {{ stats.avg_amount|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if stats.total_transactions > 0 %}
+
+{% if filtered %}
+<!-- Modo filtrado: gráfico de categorias + lista de transações -->
+<div class="chart-card">
+    <h2 class="card-title"><i class="fi fi-br-chart-pie"></i> Categorias em {{ selected_label }}</h2>
+    <div class="chart-container">
+        <canvas id="categoryChart"></canvas>
+    </div>
+</div>
+
+<!-- Transações do mês -->
+{% if transactions %}
+<div class="card">
+    <h2 class="card-title">📋 Lançamentos de {{ selected_label }}</h2>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Categoria</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr>
+                    <td>{{ t.date|date:"d/m/Y" }}</td>
+                    <td>
+                        {% if t.is_predicted %}<span title="Previsão de parcela futura">🔮 </span>{% endif %}
+                        {{ t.description }}
+                    </td>
+                    <td><span class="badge badge-purple">{{ t.category }}</span></td>
+                    <td><strong>R$ {{ t.amount|floatformat:2 }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% else %}
+<!-- Modo geral: gráfico temporal + categorias -->
+<div class="dashboard-filters">
+    <select id="cardSelector" class="form-input filter-select" onchange="updateDashboardFilters()">
+        <option value="">Todos os Cartões</option>
+        {% for card in credit_cards %}
+        {% if selected_card == card.pk %}
+        <option value="{{ card.pk }}" selected>{{ card.name }}</option>
+        {% else %}
+        <option value="{{ card.pk }}">{{ card.name }}</option>
+        {% endif %}
+        {% endfor %}
+    </select>
+
+    <select id="monthSelector" class="form-input filter-select" onchange="updateDashboardFilters()">
+        <option value="">Todos os meses</option>
+        {% for m in all_months %}
+        {% if selected_month == m.key %}
+        <option value="{{ m.key }}" selected>{{ m.label }}</option>
+        {% else %}
+        <option value="{{ m.key }}">{{ m.label }}</option>
+        {% endif %}
+        {% endfor %}
+    </select>
+</div>
+
+<script>
+    // URLs para APIs
+    const STATS_API_URL = '{% url "stats_data" %}?card=';
+    const CHART_API_URL = '{% url "chart_data" %}?card=';
+
+    // Valores iniciais - armazenados para comparação
+    let currentCard = '{{ selected_card|default:"" }}';
+    let currentMonth = '{{ selected_month|default:"" }}';
+
+    // Função para animação de contagem gradual de números
+    function animateValue(element, start, end, duration, prefix, suffix) {
+        if (start === end) {
+            element.textContent = prefix + end.toLocaleString('pt-BR') + suffix;
+            return;
+        }
+        const startTime = performance.now();
+
+        function update(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            // Easing function (ease-out cubic)
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const current = Math.round(start + (end - start) * easeOut);
+            element.textContent = prefix + current.toLocaleString('pt-BR') + suffix;
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            }
+        }
+        requestAnimationFrame(update);
+    }
+
+    // Função para atualizar KPIs via AJAX
+    async function updateStatsAJAX(card) {
+        try {
+            const response = await fetch(STATS_API_URL + card);
+            const data = await response.json();
+
+            // Obter elementos
+            const transEl = document.getElementById('kpi-total-transactions');
+            const amountEl = document.getElementById('kpi-total-amount');
+            const avgEl = document.getElementById('kpi-avg-amount');
+
+            // Extrair valores atuais dos elementos
+            const currentTrans = parseInt(transEl.textContent) || 0;
+            const currentAmount = parseFloat(amountEl.textContent.replace(/R\$ /g, '').replace(',', '.')) || 0;
+            const currentAvg = parseFloat(avgEl.textContent.replace(/R\$ /g, '').replace(',', '.')) || 0;
+
+            // Animar valores
+            animateValue(transEl, currentTrans, data.total_transactions, 800, '', '');
+            animateValue(amountEl, currentAmount, data.total_amount, 1000, 'R$ ', ',00');
+            animateValue(avgEl, currentAvg, data.avg_amount, 900, 'R$ ', ',00');
+        } catch (error) {
+            console.error('Erro ao buscar dados de KPIs:', error);
+        }
+    }
+
+    function updateDashboardFilters() {
+        const month = document.getElementById('monthSelector').value;
+        const card = document.getElementById('cardSelector') ? document.getElementById('cardSelector').value : '';
+
+        // Se o mês não mudou, usamos AJAX independente do cartão
+        const monthChanged = month !== currentMonth;
+
+        if (!monthChanged) {
+            // Mês não mudou - usar AJAX
+            updateStatsAJAX(card);
+            updateChartsAJAX(card, month);
+
+            // Atualizar URL sem recarregar
+            let url = '{% url "dashboard" %}?';
+            if (month) url += 'month=' + month + '&';
+            if (card) url += 'card=' + card;
+            window.history.pushState({}, '', url);
+
+            // Atualizar variáveis
+            currentCard = card;
+            currentMonth = month;
+            SELECTED_CARD = card;
+            SELECTED_MONTH = month;
+        } else {
+            // Mês mudou - recarregar página normalmente
+            sessionStorage.setItem('dashboardScrollY', window.scrollY);
+
+            let url = '{% url "dashboard" %}?';
+            if (month) url += 'month=' + month + '&';
+            if (card) url += 'card=' + card;
+            window.location = url;
+        }
+    }
+
+    // Função para atualizar gráficos via AJAX
+    async function updateChartsAJAX(card, month) {
+        try {
+            let url = CHART_API_URL + card;
+            if (month) url += '&month=' + month;
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            // Atualizar gráficos globalmente
+            if (typeof updateChartsFromData === 'function') {
+                updateChartsFromData(data);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar dados de gráficos:', error);
+        }
+    }
+
+    // Restaurar o scroll depois da página carregar (quando vier de um filtro)
+    window.addEventListener('load', () => {
+        const scrollY = sessionStorage.getItem('dashboardScrollY');
+        if (scrollY !== null) {
+            window.scrollTo({ top: parseInt(scrollY), behavior: 'instant' });
+            sessionStorage.removeItem('dashboardScrollY');
+        }
+    });
+</script>
+
+<div class="charts-grid">
+    <div class="chart-card">
+        <h2 class="card-title"><i class="fi fi-br-chart-line-up"></i> Evolução de Gastos</h2>
+        <div class="chart-container">
+            <canvas id="temporalChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <h2 class="card-title"><i class="fi fi-br-chart-pie"></i> Gastos por Categoria</h2>
+        <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Resumo Mensal -->
+<div class="card">
+    <h2 class="card-title"><i class="fi fi-br-list"></i> Resumo por Mês</h2>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mês</th>
+                    <th>Transações</th>
+                    <th>Total Gasto</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in monthly_list %}
+                <tr
+                    class="{% if selected_month == m.key %}row-selected{% endif %}{% if m.is_current %} row-current{% endif %}">
+                    <td>
+                        <strong>{{ m.label }}</strong>
+                    </td>
+                    <td>{{ m.total_transactions }}</td>
+                    <td><strong>R$ {{ m.total_amount|floatformat:2 }}</strong></td>
+                    <td>
+                        {% if selected_month == m.key %}
+                        <a href="javascript:void(0)"
+                            onclick="document.getElementById('monthSelector').value=''; updateDashboardFilters();"
+                            class="btn btn-secondary btn-xs">Voltar</a>
+                        {% else %}
+                        <a href="javascript:void(0)"
+                            onclick="document.getElementById('monthSelector').value='{{ m.key }}'; updateDashboardFilters();"
+                            class="btn btn-primary btn-xs">Ver →</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="card empty-state">
+    <div class="empty-icon">📂</div>
+    <h2>Nenhuma fatura importada ainda</h2>
+    <p>Faça upload da sua primeira fatura do Nubank para começar a análise</p>
+    <a href="{% url 'upload' %}" class="btn btn-primary">
+        📤 Fazer Upload
+    </a>
+</div>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if stats.total_transactions > 0 %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script
+    src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script>
+    const SELECTED_MONTH = '{{ selected_month|default:"" }}';
+    const SELECTED_CARD = '{{ selected_card|default:"" }}';
+    const IS_FILTERED = {% if filtered %}true{% else %} false{% endif %};
+</script>
+<script src="{% static 'js/charts.js' %}?v={% now 'U' %}"></script>
+{% endif %}
+{% endblock %}

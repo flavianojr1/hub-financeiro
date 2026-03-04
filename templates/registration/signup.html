@@ -1,0 +1,65 @@
+{% extends 'base_public.html' %}
+{% block title %}Cadastro - Hub Financeiro{% endblock %}
+{% block extra_css %}
+<style>
+    .help-txt {
+        color: #718096;
+        display: block;
+        margin-top: 4px;
+        font-size: .8em
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="auth-card">
+    <h2 class="auth-title">Criar Nova Conta</h2>
+    <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div
+            style="background:#fff5f5;color:#e53e3e;padding:.75rem;border-radius:6px;margin-bottom:1rem;font-size:.9rem;border:1px solid #feb2b2">
+            {% for error in form.non_field_errors %}
+            {{ error }}
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">
+                {{ field.label }}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+            <small class="help-txt">
+                {{ field.help_text|safe }}
+            </small>
+            {% endif %}
+            {% if field.errors %}
+            <span style="color:#e53e3e;font-size:.8em">
+                {{ field.errors.0 }}
+            </span>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn" style="width:100%;margin-top:1rem">
+            Cadastrar
+        </button>
+    </form>
+    <div class="auth-footer">
+        Ja tem uma conta?
+        <a href="{% url 'login' %}">Entrar</a>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var els = document.querySelectorAll('.auth-card input');
+        for (var i = 0; i < els.length; i++) {
+            els[i].classList.add('form-control');
+            var n = els[i].name;
+            if (n === 'username') els[i].placeholder = 'Usuario';
+            if (n.indexOf('password') > -1) els[i].placeholder = 'Senha';
+            if (n === 'email') els[i].placeholder = 'seu@email.com';
+        }
+    });
+</script>
+{% endblock %}
