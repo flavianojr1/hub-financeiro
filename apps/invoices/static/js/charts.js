@@ -330,7 +330,7 @@ function renderCategoryChart(data) {
                 y: {
                     beginAtZero: true,
                     display: false,
-                    grace: '30%',
+                    grace: '15%',
                     grid: {
                         display: false,
                         drawBorder: false
