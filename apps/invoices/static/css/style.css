@@ -139,23 +139,67 @@ body {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease, width 0.3s ease;
 }
 
-.sidebar-header {
-    padding: var(--spacing-lg) var(--spacing-md);
-    border-bottom: 1px solid var(--sidebar-border);
-    transition: padding 0.3s ease;
+.sidebar-header-new {
+    padding: var(--spacing-md);
     display: flex;
-    align-items: flex-start;
     justify-content: space-between;
-    gap: var(--spacing-xs);
+    align-items: center;
+    width: 100%;
+    min-height: 70px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 1px solid var(--sidebar-border);
+    position: relative;
+    overflow: hidden;
 }
 
-.sidebar-logo {
-    font-size: 1.3rem;
-    font-weight: 700;
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+.sidebar-logo-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    flex: 1;
+    position: relative;
+    height: 40px;
+}
+
+.sidebar-logo-container img {
+    position: absolute;
+    left: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-20px) scale(0.9);
+    width: 180px;
+    height: auto;
+}
+
+/* Ícone quadrado específico */
+.logo-icon-collapsed {
+    width: 38px !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) scale(0.8) !important;
+    top: 50%;
+}
+
+/* Gerenciamento de Logos por Tema e Estado */
+html[data-theme="dark"] .sidebar:not(.collapsed) .logo-wide-dark,
+html[data-theme="light"] .sidebar:not(.collapsed) .logo-wide-light {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0) scale(1);
+}
+
+/* Estado Recolhido (Collapsed) */
+body.sidebar-collapsed .logo-wide-light,
+body.sidebar-collapsed .logo-wide-dark {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transform: translateX(-20px) scale(0.9) !important;
+}
+
+body.sidebar-collapsed .logo-icon-collapsed {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translate(-50%, -50%) scale(1) !important;
 }
 
 .sidebar-collapse-btn {
@@ -168,9 +212,70 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    align-self: flex-start;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 5;
+}
+
+body.sidebar-collapsed .sidebar-header-new {
+    justify-content: center;
+    padding: var(--spacing-md) 0;
+    min-height: 110px;
+    flex-direction: column;
+}
+
+body.sidebar-collapsed .sidebar-collapse-btn {
+    transform: translateY(10px); /* Leve descida para dar espaço ao ícone */
+}
+
+/* Transições para o conteúdo da sidebar */
+.sidebar-label {
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+body.sidebar-collapsed .sidebar-label {
+    opacity: 0;
+    visibility: hidden;
+    width: 0;
+}
+
+.sidebar-link {
+    transition: all 0.3s ease;
+}
+
+.sidebar-collapse-btn {
+    width: 36px;
+    height: 34px;
+    border: 1px solid var(--menu-toggle-border);
+    border-radius: 10px;
+    background: var(--menu-toggle-bg);
+    color: var(--menu-toggle-icon);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
+}
+
+/* Estado Recolhido (Collapsed) */
+body.sidebar-collapsed .logo-wide-light,
+body.sidebar-collapsed .logo-wide-dark {
+    display: none !important;
+}
+
+body.sidebar-collapsed .logo-icon-collapsed {
+    display: block !important;
+}
+
+body.sidebar-collapsed .sidebar-header-new {
+    padding: var(--spacing-lg) 0;
+}
+
+body.sidebar-collapsed .sidebar-toggle-container {
+    justify-content: center;
+    padding: 0 0 var(--spacing-md);
 }
 
 .sidebar-collapse-btn:hover {

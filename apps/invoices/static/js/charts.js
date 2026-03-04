@@ -152,11 +152,12 @@ function renderTemporalChart(data) {
                 legend: {
                     display: true,
                     position: 'top',
+                    align: 'center',
                     labels: {
                         color: colors.textColor,
                         font: { family: 'Inter', size: 12, weight: 600 },
                         usePointStyle: true,
-                        padding: 20
+                        padding: 10
                     }
                 },
                 tooltip: {
@@ -276,8 +277,8 @@ function renderCategoryChart(data) {
                     color: colors.textColor,
                     font: {
                         family: 'Inter',
-                        size: 11,
-                        weight: '600'
+                        size: 14,
+                        weight: 'bold'
                     },
                     formatter: function (value) {
                         return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -320,6 +321,7 @@ function renderCategoryChart(data) {
                 y: {
                     beginAtZero: true,
                     display: false,
+                    grace: '30%',
                     grid: {
                         display: false,
                         drawBorder: false

@@ -18,113 +18,57 @@
         max-width: 200px;
     }
 </style>
-<div>
-    <!-- Cabeçalho com dropdown de mês -->
-    <div class="page-header-row">
-        <div>
-            <h1 class="page-title">{% if filtered %}📅 {{ selected_label }}{% else %}Dashboard de Análise{% endif %}
-            </h1>
-            <p class="page-subtitle">{% if filtered %}Análise filtrada por mês{% else %}Visualize e analise seus gastos
-                do Nubank{% endif %}</p>
-        </div>
-    </div>
-</div>
-
-<!-- Stats Grid -->
-<div class="stats-grid">
-    <div class="stat-card transactions">
+<!-- Stats Grid - Compacted -->
+<div class="stats-grid" style="margin-bottom: 1rem;">
+    <div class="stat-card transactions" style="padding: var(--spacing-md);">
         <div class="stat-header">
-            <div class="stat-icon-wrapper">
-                <i class="fi fi-br-credit-card"></i>
+            <div class="stat-icon-wrapper" style="width: 40px; height: 40px;">
+                <i class="fi fi-br-credit-card" style="font-size: 1.2rem;"></i>
             </div>
             <div class="stat-content">
-                <div class="stat-label">Total de Transações (Mês Atual)</div>
-                <div class="stat-value" id="kpi-total-transactions">{{ stats_current_month.total_transactions }}</div>
+                <div class="stat-label" style="font-size: 0.7rem;">Transações (Mês)</div>
+                <div class="stat-value" id="kpi-total-transactions" style="font-size: 1.4rem;">{{ stats_current_month.total_transactions }}</div>
             </div>
         </div>
     </div>
-    <div class="stat-card amount">
+    <div class="stat-card amount" style="padding: var(--spacing-md);">
         <div class="stat-header">
-            <div class="stat-icon-wrapper">
-                <i class="fi fi-br-coins"></i>
+            <div class="stat-icon-wrapper" style="width: 40px; height: 40px;">
+                <i class="fi fi-br-coins" style="font-size: 1.2rem;"></i>
             </div>
             <div class="stat-content">
-                <div class="stat-label">Total Gasto (Mês Atual)</div>
-                <div class="stat-value" id="kpi-total-amount">R$ {{ stats_current_month.total_amount|floatformat:2 }}
-                </div>
+                <div class="stat-label" style="font-size: 0.7rem;">Total Gasto (Mês)</div>
+                <div class="stat-value" id="kpi-total-amount" style="font-size: 1.4rem;">R$ {{ stats_current_month.total_amount|floatformat:2 }}</div>
             </div>
         </div>
     </div>
-    <div class="stat-card invoices">
+    <div class="stat-card invoices" style="padding: var(--spacing-md);">
         <div class="stat-header">
-            <div class="stat-icon-wrapper">
-                <i class="fi fi-br-file"></i>
+            <div class="stat-icon-wrapper" style="width: 40px; height: 40px;">
+                <i class="fi fi-br-file" style="font-size: 1.2rem;"></i>
             </div>
             <div class="stat-content">
-                <div class="stat-label">Faturas Importadas</div>
-                <div class="stat-value">{{ stats.total_invoices }}</div>
+                <div class="stat-label" style="font-size: 0.7rem;">Faturas</div>
+                <div class="stat-value" style="font-size: 1.4rem;">{{ stats.total_invoices }}</div>
             </div>
         </div>
     </div>
-    <div class="stat-card avg">
+    <div class="stat-card avg" style="padding: var(--spacing-md);">
         <div class="stat-header">
-            <div class="stat-icon-wrapper">
-                <i class="fi fi-br-chart-pie"></i>
+            <div class="stat-icon-wrapper" style="width: 40px; height: 40px;">
+                <i class="fi fi-br-chart-pie" style="font-size: 1.2rem;"></i>
             </div>
             <div class="stat-content">
-                <div class="stat-label">Média por Transação</div>
-                <div class="stat-value" id="kpi-avg-amount">R$ {{ stats.avg_amount|floatformat:2 }}</div>
+                <div class="stat-label" style="font-size: 0.7rem;">Média Transação</div>
+                <div class="stat-value" id="kpi-avg-amount" style="font-size: 1.4rem;">R$ {{ stats.avg_amount|floatformat:2 }}</div>
             </div>
         </div>
     </div>
 </div>
 
-{% if stats.total_transactions > 0 %}
-
-{% if filtered %}
-<!-- Modo filtrado: gráfico de categorias + lista de transações -->
-<div class="chart-card">
-    <h2 class="card-title"><i class="fi fi-br-chart-pie"></i> Categorias em {{ selected_label }}</h2>
-    <div class="chart-container">
-        <canvas id="categoryChart"></canvas>
-    </div>
-</div>
-
-<!-- Transações do mês -->
-{% if transactions %}
-<div class="card">
-    <h2 class="card-title">📋 Lançamentos de {{ selected_label }}</h2>
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Descrição</th>
-                    <th>Categoria</th>
-                    <th>Valor</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for t in transactions %}
-                <tr>
-                    <td>{{ t.date|date:"d/m/Y" }}</td>
-                    <td>
-                        {% if t.is_predicted %}<span title="Previsão de parcela futura">🔮 </span>{% endif %}
-                        {{ t.description }}
-                    </td>
-                    <td><span class="badge badge-purple">{{ t.category }}</span></td>
-                    <td><strong>R$ {{ t.amount|floatformat:2 }}</strong></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endif %}
-{% else %}
-<!-- Modo geral: gráfico temporal + categorias -->
-<div class="dashboard-filters">
-    <select id="cardSelector" class="form-input filter-select" onchange="updateDashboardFilters()">
+<!-- Filters and Slicers - Below KPIs -->
+<div class="dashboard-filters" style="display: flex; justify-content: flex-end; margin-bottom: 1rem; gap: 10px; flex-wrap: wrap;">
+    <select id="cardSelector" class="form-input filter-select" onchange="updateDashboardFilters()" style="max-width: 200px;">
         <option value="">Todos os Cartões</option>
         {% for card in credit_cards %}
         {% if selected_card == card.pk %}
@@ -135,7 +79,7 @@
         {% endfor %}
     </select>
 
-    <select id="monthSelector" class="form-input filter-select" onchange="updateDashboardFilters()">
+    <select id="monthSelector" class="form-input filter-select" onchange="updateDashboardFilters()" style="max-width: 200px;">
         <option value="">Todos os meses</option>
         {% for m in all_months %}
         {% if selected_month == m.key %}
@@ -146,6 +90,60 @@
         {% endfor %}
     </select>
 </div>
+
+{% if stats.total_transactions > 0 %}
+
+{% if filtered %}
+<!-- Modo filtrado: gráfico de categorias + lista de transações -->
+<div class="charts-grid" style="display: grid; grid-template-columns: 45fr 55fr; gap: 1rem; margin-bottom: 1rem;">
+    <div class="chart-card" style="padding: var(--spacing-md);">
+        <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><i class="fi fi-br-chart-pie"></i> Categorias</h2>
+        <div class="chart-container" style="height: 320px;">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+    <div class="card" style="padding: var(--spacing-md); margin-bottom: 0; overflow: hidden;">
+        <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;">📋 Lançamentos</h2>
+        <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="font-size: 0.7rem;">Data</th>
+                        <th style="font-size: 0.7rem;">Descrição</th>
+                        <th style="font-size: 0.7rem;">Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td style="font-size: 0.8rem;">{{ t.date|date:"d/m" }}</td>
+                        <td style="font-size: 0.8rem;">{{ t.description|truncatechars:20 }}</td>
+                        <td style="font-size: 0.8rem;"><strong>R$ {{ t.amount|floatformat:2 }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<!-- Modo geral: gráfico temporal + categorias -->
+<div class="charts-grid" style="display: grid; grid-template-columns: 55fr 45fr; gap: 1rem; margin-bottom: 1rem;">
+    <div class="chart-card" style="padding: var(--spacing-md);">
+        <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><i class="fi fi-br-chart-line-up"></i> Evolução</h2>
+        <div class="chart-container" style="height: 320px;">
+            <canvas id="temporalChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card" style="padding: var(--spacing-md);">
+        <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><i class="fi fi-br-chart-pie"></i> Categorias</h2>
+        <div class="chart-container" style="height: 320px;">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <script>
     // URLs para APIs
@@ -265,33 +263,16 @@
     });
 </script>
 
-<div class="charts-grid">
-    <div class="chart-card">
-        <h2 class="card-title"><i class="fi fi-br-chart-line-up"></i> Evolução de Gastos</h2>
-        <div class="chart-container">
-            <canvas id="temporalChart"></canvas>
-        </div>
-    </div>
-
-    <div class="chart-card">
-        <h2 class="card-title"><i class="fi fi-br-chart-pie"></i> Gastos por Categoria</h2>
-        <div class="chart-container">
-            <canvas id="categoryChart"></canvas>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Resumo Mensal -->
-<div class="card">
-    <h2 class="card-title"><i class="fi fi-br-list"></i> Resumo por Mês</h2>
+<!-- Resumo Mensal - Compacted -->
+<div class="card" style="padding: var(--spacing-md);">
+    <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><i class="fi fi-br-list"></i> Resumo Mensal</h2>
     <div class="table-responsive">
         <table class="table">
             <thead>
                 <tr>
-                    <th>Mês</th>
-                    <th>Transações</th>
-                    <th>Total Gasto</th>
+                    <th style="font-size: 0.7rem;">Mês</th>
+                    <th style="font-size: 0.7rem;">Transações</th>
+                    <th style="font-size: 0.7rem;">Total Gasto</th>
                     <th></th>
                 </tr>
             </thead>
@@ -299,11 +280,9 @@
                 {% for m in monthly_list %}
                 <tr
                     class="{% if selected_month == m.key %}row-selected{% endif %}{% if m.is_current %} row-current{% endif %}">
-                    <td>
-                        <strong>{{ m.label }}</strong>
-                    </td>
-                    <td>{{ m.total_transactions }}</td>
-                    <td><strong>R$ {{ m.total_amount|floatformat:2 }}</strong></td>
+                    <td style="font-size: 0.8rem;"><strong>{{ m.label }}</strong></td>
+                    <td style="font-size: 0.8rem;">{{ m.total_transactions }}</td>
+                    <td style="font-size: 0.8rem;"><strong>R$ {{ m.total_amount|floatformat:2 }}</strong></td>
                     <td>
                         {% if selected_month == m.key %}
                         <a href="javascript:void(0)"
@@ -312,7 +291,7 @@
                         {% else %}
                         <a href="javascript:void(0)"
                             onclick="document.getElementById('monthSelector').value='{{ m.key }}'; updateDashboardFilters();"
-                            class="btn btn-primary btn-xs">Ver →</a>
+                            class="btn btn-primary btn-xs">Ver</a>
                         {% endif %}
                     </td>
                 </tr>

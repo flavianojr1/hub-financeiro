@@ -32,16 +32,13 @@ def dashboard(request):
     
     credit_cards = CreditCard.objects.filter(user=request.user)
 
-    # Resumo mensal: a partir do mês anterior, em ordem crescente
+    # Resumo mensal: todos os meses com transações, em ordem crescente
     from datetime import date
-    from dateutil.relativedelta import relativedelta
     today = date.today()
-    previous_month_start = (today.replace(day=1) - relativedelta(months=1))
     current_month_key = f"{today.year}-{today.month:02d}"
 
     monthly_summary = (
         all_transactions
-        .filter(date__gte=previous_month_start)
         .annotate(month=TruncMonth('date'))
         .values('month')
         .annotate(
