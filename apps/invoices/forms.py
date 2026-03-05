@@ -23,6 +23,9 @@ class CSVUploadForm(forms.Form):
         })
     )
 
+    target_month = forms.IntegerField(widget=forms.HiddenInput(), required=False)
+    target_year = forms.IntegerField(widget=forms.HiddenInput(), required=False)
+
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         upload_mode = kwargs.pop('upload_mode', False)

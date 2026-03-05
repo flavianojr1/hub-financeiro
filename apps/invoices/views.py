@@ -170,12 +170,36 @@ def upload_invoice(request):
 
             # Processar arquivo baseado na extensão
             try:
+                # Obter período confirmado pelo usuário (sobreposição)
+                target_month = form.cleaned_data.get('target_month')
+                target_year = form.cleaned_data.get('target_year')
+
                 extension = csv_file.name.lower().split('.')[-1]
                 if extension == 'pdf':
                     created, predicted = process_inter_pdf(csv_file, invoice)
                 else:
                     created, predicted = process_nubank_csv(csv_file, invoice)
                 
+                # Aplicar sobreposição de período se o usuário confirmou no modal
+                if target_month and target_year:
+                    invoice.month = target_month
+                    invoice.year = target_year
+                    invoice.save()
+                    # Atualizar datas das transações principais (não previstas) para o novo mês/ano
+                    # Mantendo o dia original
+                    from datetime import date
+                    for trans in invoice.transactions.filter(is_predicted=False):
+                        try:
+                            trans.date = date(int(target_year), int(target_month), trans.date.day)
+                            trans.save()
+                        except ValueError:
+                            # Tratar caso o dia não exista no novo mês (ex: 31 de Abril)
+                            # Ajusta para o último dia do mês
+                            import calendar
+                            last_day = calendar.monthrange(int(target_year), int(target_month))[1]
+                            trans.date = date(int(target_year), int(target_month), last_day)
+                            trans.save()
+
                 msg = f'✅ Fatura processada! {created} transações importadas.'
                 if predicted > 0:
                     msg += f' 🔮 {predicted} parcelas futuras geradas.'

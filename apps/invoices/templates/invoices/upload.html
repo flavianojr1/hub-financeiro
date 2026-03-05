@@ -88,13 +88,132 @@
             grid-template-columns: 1fr;
         }
     }
+
+    /* Modal de Confirmação */
+    .confirmation-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-dialog {
+        background: var(--bg-card);
+        width: 90%;
+        max-width: 450px;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--border-color);
+        animation: modalFadeIn 0.3s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .modal-header-confirm {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .modal-title-confirm {
+        font-size: 1.5rem;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .modal-subtitle {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+    }
+
+    .period-selector {
+        display: flex;
+        gap: 15px;
+        margin: 2rem 0;
+    }
+
+    .selector-group {
+        flex: 1;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 1rem;
+    }
+
+    .modal-actions button {
+        flex: 1;
+        padding: 12px;
+    }
 </style>
 <div>
+    <div class="confirmation-modal" id="confirmationModal">
+        <div class="modal-dialog">
+            <div class="modal-header-confirm">
+                <div class="modal-icon">📅</div>
+                <h2 class="modal-title-confirm">Confirmar Período</h2>
+                <p class="modal-subtitle">Identificamos este mês para sua fatura. Está correto?</p>
+            </div>
+
+            <div class="period-selector">
+                <div class="selector-group">
+                    <label class="form-label" style="font-size: 0.8rem;">Mês</label>
+                    <select id="modalMonth" class="form-input">
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                </div>
+                <div class="selector-group">
+                    <label class="form-label" style="font-size: 0.8rem;">Ano</label>
+                    <select id="modalYear" class="form-input">
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary-ghost" onclick="closeModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmAndSubmit()">Processar Fatura</button>
+            </div>
+        </div>
+    </div>
+
     <div class="upload-layout">
         <div class="card upload-card fade-in-up" style="animation-delay: 0.1s;">
             <h2 class="card-title">Enviar Arquivo</h2>
             <form method="post" enctype="multipart/form-data" id="uploadForm" class="upload-form">
                 {% csrf_token %}
+                <input type="hidden" name="target_month" id="targetMonth" value="">
+                <input type="hidden" name="target_year" id="targetYear" value="">
 
                 <div class="form-group">
                     <label for="creditCard" class="form-label">Qual cartão de crédito?</label>
@@ -170,6 +289,11 @@
     const fileName = document.getElementById('fileName');
     const uploadForm = document.getElementById('uploadForm');
     const submitBtn = document.getElementById('submitBtn');
+    const modal = document.getElementById('confirmationModal');
+    const modalMonth = document.getElementById('modalMonth');
+    const modalYear = document.getElementById('modalYear');
+    const targetMonth = document.getElementById('targetMonth');
+    const targetYear = document.getElementById('targetYear');
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         uploadArea.addEventListener(eventName, preventDefaults, false);
@@ -208,7 +332,51 @@
         if (files.length > 0) {
             const file = files[0];
             fileName.textContent = `OK ${file.name} (${formatBytes(file.size)})`;
+            
+            // Tentar detectar data no nome do arquivo
+            detectPeriod(file.name);
         }
+    }
+
+    function detectPeriod(name) {
+        const now = new Date();
+        let month = now.getMonth() + 1;
+        let year = now.getFullYear();
+
+        // Mapeamento de meses
+        const monthsMap = {
+            'jan': 1, 'fevereiro': 2, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+            'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
+        };
+
+        const nameLower = name.toLowerCase();
+
+        // Tentar capturar padrões como "2026-03" ou "03-2026"
+        const isoMatch = name.match(/(\d{4})[-_](\d{2})/) || name.match(/(\d{2})[-_](\d{4})/);
+        if (isoMatch) {
+            if (isoMatch[1].length === 4) {
+                year = parseInt(isoMatch[1]);
+                month = parseInt(isoMatch[2]);
+            } else {
+                month = parseInt(isoMatch[1]);
+                year = parseInt(isoMatch[2]);
+            }
+        } else {
+            // Tentar capturar meses por extenso/abreviado
+            for (const [key, val] of Object.entries(monthsMap)) {
+                if (nameLower.includes(key)) {
+                    month = val;
+                    // Tentar pegar o ano próximo ao mês
+                    const yearMatch = name.match(/\d{4}/);
+                    if (yearMatch) year = parseInt(yearMatch[0]);
+                    break;
+                }
+            }
+        }
+
+        // Ajustar valores no modal
+        modalMonth.value = month;
+        modalYear.value = year;
     }
 
     function formatBytes(bytes) {
@@ -219,10 +387,35 @@
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
 
-    uploadForm.addEventListener('submit', () => {
+    // Interceptar o submit do form para abrir o modal
+    uploadForm.addEventListener('submit', (e) => {
+        if (!targetMonth.value || !targetYear.value) {
+            e.preventDefault();
+            openModal();
+        }
+    });
+
+    function openModal() {
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+    }
+
+    function confirmAndSubmit() {
+        targetMonth.value = modalMonth.value;
+        targetYear.value = modalYear.value;
+        
+        closeModal();
+        
+        // Ativar animação de loading e travar botão original
         document.getElementById('submitText').style.display = 'none';
         document.getElementById('loadingText').style.display = 'inline-flex';
         submitBtn.disabled = true;
-    });
+        
+        // Enviar o form
+        uploadForm.submit();
+    }
 </script>
 {% endblock %}
