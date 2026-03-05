@@ -14,8 +14,11 @@ def process_inter_pdf(pdf_file, invoice):
     Processa um arquivo PDF do Banco Inter e cria transações.
     """
     transactions_created = 0
-    dates_found = []
-
+    predictions_created = 0
+    
+    # Extrair data de vencimento da fatura (Página 1)
+    due_date = None
+    
     # Mapeamento de meses em português
     months_pt = {
         'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
@@ -23,48 +26,61 @@ def process_inter_pdf(pdf_file, invoice):
     }
 
     # Regex para capturar: Data, Descrição, Valor
-    # Ex: "11 de dez. 2025 CP PARC SHOPPING INTER (Parcela 03 de 10) - R$ 350,90"
     inter_regex = re.compile(r'(\d{2} de (\w{3})\.? \d{4})\s+(.*?)\s+-\s+([\+\s]*R\$\s*[\d\.,]+)')
+    
+    # Regex para vencimento: "02/03/2026" (Página 1 ou 2)
+    due_date_regex = re.compile(r'(\d{2}/\d{2}/\d{4})')
 
     with pdfplumber.open(pdf_file) as pdf:
+        # Tentar pegar o vencimento nas primeiras páginas
+        for i in range(2):
+            text = pdf.pages[i].extract_text()
+            if text:
+                dates = due_date_regex.findall(text)
+                if dates:
+                    # O Inter repete o vencimento várias vezes, pegamos o primeiro
+                    due_date = datetime.strptime(dates[0], '%d/%m/%Y').date()
+                    break
+
+        if not due_date:
+            # Fallback para hoje caso não encontre
+            due_date = datetime.now().date()
+
+        # Configurar ano/mês da fatura baseado no vencimento (geralmente refere-se ao mês anterior ou atual)
+        invoice.year = due_date.year
+        invoice.month = due_date.month
+        invoice.save()
+
         for page in pdf.pages:
-            # Tentar extrair via tabelas primeiro (Inter costuma vir como lista de strings em rows)
             tables = page.extract_tables()
             all_rows = []
             for table in tables:
                 for row in table:
-                    # Se a linha for uma lista, juntar em string
                     line = " ".join([str(cell) for cell in row if cell])
                     all_rows.append(line)
             
-            # Se tabelas falharem, tentar texto puro
             if not all_rows:
                 text = page.extract_text()
-                if text:
-                    all_rows = text.split('\n')
+                if text: all_rows = text.split('\n')
 
             for line in all_rows:
                 match = inter_regex.search(line)
                 if match:
-                    full_date_str, month_abbr, description, value_str = match.groups()
-
-                    # Ignorar pagamentos (marcados com '+')
-                    if '+' in value_str:
-                        continue
+                    _, month_abbr, description, value_str = match.groups()
+                    if '+' in value_str: continue
 
                     try:
-                        # Parse Data: "11 de dez. 2025"
-                        day = full_date_str.split(' ')[0]
-                        year = full_date_str.split(' ')[-1]
-                        month = months_pt.get(month_abbr.lower().replace('.', ''), 1)
-                        date_val = datetime(int(year), month, int(day)).date()
+                        # Para o Banco Inter, a data da transação na fatura é informativa.
+                        # Todos os gastos de uma fatura "pertencem" financeiramente ao mês de vencimento dela.
+                        # Portanto, usamos o due_date para a transação principal.
+                        date_val = due_date 
 
-                        # Parse Valor: "R$ 350,90"
+                        # Limpar valor
                         clean_value = value_str.replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
                         amount_val = Decimal(clean_value)
 
-                        # Criar transação
-                        Transaction.objects.create(
+                        # Criar transação principal
+                        t = Transaction.objects.create(
                             invoice=invoice,
                             date=date_val,
                             description=description.strip(),
@@ -72,20 +88,35 @@ def process_inter_pdf(pdf_file, invoice):
                             is_predicted=False
                         )
                         transactions_created += 1
-                        dates_found.append(date_val)
 
-                    except Exception as e:
+                        # Lógica de Parcelamento (Ex: Parcela 03 de 10)
+                        installment_match = re.search(r'Parcela (\d{2}) de (\d{2})', description)
+                        if installment_match:
+                            current_installment = int(installment_match.group(1))
+                            total_installments = int(installment_match.group(2))
+
+                            if 0 < current_installment < total_installments:
+                                remaining = total_installments - current_installment
+                                for i in range(1, remaining + 1):
+                                    next_date = due_date + relativedelta(months=i)
+                                    next_desc = description.replace(
+                                        f'Parcela {current_installment:02d} de {total_installments:02d}',
+                                        f'Parcela {current_installment + i:02d} de {total_installments:02d}'
+                                    ).strip()
+
+                                    Transaction.objects.create(
+                                        invoice=invoice,
+                                        date=next_date,
+                                        description=next_desc,
+                                        amount=abs(amount_val),
+                                        is_predicted=True
+                                    )
+                                    predictions_created += 1
+
+                    except Exception:
                         continue
 
-    # Determinar ano/mês predominante
-    if dates_found:
-        month_counter = Counter((d.year, d.month) for d in dates_found)
-        most_common = month_counter.most_common(1)[0][0]
-        invoice.year = most_common[0]
-        invoice.month = most_common[1]
-        invoice.save()
-
-    return transactions_created, 0
+    return transactions_created, predictions_created
 
 
 def process_nubank_csv(csv_file, invoice):
