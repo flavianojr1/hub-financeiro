@@ -112,10 +112,10 @@
                 </div>
 
                 <div class="upload-area upload-area-compact" id="uploadArea">
-                    <div class="upload-icon">CSV</div>
-                    <h3 class="upload-drop-title">Arraste seu arquivo CSV aqui</h3>
-                    <p class="text-secondary upload-drop-subtitle">ou clique para selecionar</p>
-                    <input type="file" name="csv_file" id="csvFile" class="file-input" accept=".csv" required>
+                    <div class="upload-icon">📄</div>
+                    <h3 class="upload-drop-title">Arraste sua fatura aqui</h3>
+                    <p class="text-secondary upload-drop-subtitle">ou clique para selecionar (.csv ou .pdf)</p>
+                    <input type="file" name="csv_file" id="csvFile" class="file-input" accept=".csv,.pdf" required>
                     <label for="csvFile" class="btn btn-primary">Selecionar Arquivo</label>
                     <div id="fileName" class="upload-file-name"></div>
                 </div>
@@ -147,19 +147,16 @@
         </div>
 
         <div class="card upload-card fade-in-up" style="animation-delay: 0.2s;">
-            <h2 class="card-title">Formato do CSV</h2>
+            <h2 class="card-title">Faturas Suportadas</h2>
             <p class="text-secondary">
-                O arquivo deve conter as colunas: <strong>data</strong>, <strong>descrição</strong> e
-                <strong>valor</strong>.
+                Atualmente aceitamos os seguintes formatos:
             </p>
             <ul class="upload-info-list">
-                <li>Baixe o CSV no app do Nubank, dentro da área de faturas.</li>
-                <li>Selecione o cartão correto antes de enviar o arquivo.</li>
-                <li>Use um arquivo por envio para manter o histórico organizado.</li>
+                <li><strong>Nubank</strong>: Arquivo .CSV exportado pelo app.</li>
+                <li><strong>Banco Inter</strong>: Arquivo .PDF da fatura fechada.</li>
             </ul>
             <div class="upload-info-note">
-                Nesta versão, o upload está otimizado para o formato CSV do Nubank. Em uma próxima etapa, vamos aceitar
-                outros layouts de CSV com conversão automática para o padrão do projeto.
+                <strong>Dica:</strong> Para o Banco Inter, envie o PDF completo que você recebe por e-mail ou baixa no app. O sistema identificará automaticamente os gastos e parcelamentos.
             </div>
         </div>
     </div>

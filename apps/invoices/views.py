@@ -7,7 +7,13 @@ from django.db.models.functions import TruncMonth
 from django.db import IntegrityError
 from .models import Invoice, Transaction, Category, CategoryRule, CreditCard
 from .forms import CSVUploadForm, CategoryForm, CategoryRuleForm, CreditCardForm
-from .utils import process_nubank_csv, get_temporal_data, get_category_data, recategorize_user_transactions
+from .utils import (
+    process_nubank_csv, 
+    process_inter_pdf, 
+    get_temporal_data, 
+    get_category_data, 
+    recategorize_user_transactions
+)
 
 MONTH_NAMES = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -146,7 +152,7 @@ def dashboard(request):
 
 @login_required
 def upload_invoice(request):
-    """View para upload de CSV"""
+    """View para upload de fatura (CSV ou PDF)"""
     has_cards = CreditCard.objects.filter(user=request.user).exists()
 
     if request.method == 'POST':
@@ -162,9 +168,14 @@ def upload_invoice(request):
                 filename=csv_file.name
             )
 
-            # Processar CSV
+            # Processar arquivo baseado na extensão
             try:
-                created, predicted = process_nubank_csv(csv_file, invoice)
+                extension = csv_file.name.lower().split('.')[-1]
+                if extension == 'pdf':
+                    created, predicted = process_inter_pdf(csv_file, invoice)
+                else:
+                    created, predicted = process_nubank_csv(csv_file, invoice)
+                
                 msg = f'✅ Fatura processada! {created} transações importadas.'
                 if predicted > 0:
                     msg += f' 🔮 {predicted} parcelas futuras geradas.'
@@ -174,7 +185,7 @@ def upload_invoice(request):
                 invoice.delete()
                 messages.error(
                     request,
-                    f'❌ Erro ao processar CSV: {str(e)}'
+                    f'❌ Erro ao processar arquivo: {str(e)}'
                 )
     else:
         form = CSVUploadForm(user=request.user, upload_mode=True)
@@ -212,7 +223,7 @@ def invoice_delete(request, pk):
 
 @login_required
 def invoice_update(request, pk):
-    """View para atualizar uma fatura existente (substituindo-a por um novo CSV)"""
+    """View para atualizar uma fatura existente (substituindo-a por um novo arquivo)"""
     old_invoice = get_object_or_404(Invoice, pk=pk, user=request.user)
     
     if request.method == 'POST':
@@ -229,7 +240,11 @@ def invoice_update(request, pk):
             )
 
             try:
-                created, predicted = process_nubank_csv(csv_file, new_invoice)
+                extension = csv_file.name.lower().split('.')[-1]
+                if extension == 'pdf':
+                    created, predicted = process_inter_pdf(csv_file, new_invoice)
+                else:
+                    created, predicted = process_nubank_csv(csv_file, new_invoice)
                 
                 # Sucesso: deletar a antiga e mostrar mensagem
                 old_name = old_invoice.period_display

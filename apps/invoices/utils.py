@@ -1,11 +1,91 @@
 import csv
 import re
+import pdfplumber
+import io
 from decimal import Decimal
 from datetime import datetime
 from collections import Counter
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from .models import Invoice, Transaction
+
+def process_inter_pdf(pdf_file, invoice):
+    """
+    Processa um arquivo PDF do Banco Inter e cria transações.
+    """
+    transactions_created = 0
+    dates_found = []
+
+    # Mapeamento de meses em português
+    months_pt = {
+        'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+        'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
+    }
+
+    # Regex para capturar: Data, Descrição, Valor
+    # Ex: "11 de dez. 2025 CP PARC SHOPPING INTER (Parcela 03 de 10) - R$ 350,90"
+    inter_regex = re.compile(r'(\d{2} de (\w{3})\.? \d{4})\s+(.*?)\s+-\s+([\+\s]*R\$\s*[\d\.,]+)')
+
+    with pdfplumber.open(pdf_file) as pdf:
+        for page in pdf.pages:
+            # Tentar extrair via tabelas primeiro (Inter costuma vir como lista de strings em rows)
+            tables = page.extract_tables()
+            all_rows = []
+            for table in tables:
+                for row in table:
+                    # Se a linha for uma lista, juntar em string
+                    line = " ".join([str(cell) for cell in row if cell])
+                    all_rows.append(line)
+            
+            # Se tabelas falharem, tentar texto puro
+            if not all_rows:
+                text = page.extract_text()
+                if text:
+                    all_rows = text.split('\n')
+
+            for line in all_rows:
+                match = inter_regex.search(line)
+                if match:
+                    full_date_str, month_abbr, description, value_str = match.groups()
+
+                    # Ignorar pagamentos (marcados com '+')
+                    if '+' in value_str:
+                        continue
+
+                    try:
+                        # Parse Data: "11 de dez. 2025"
+                        day = full_date_str.split(' ')[0]
+                        year = full_date_str.split(' ')[-1]
+                        month = months_pt.get(month_abbr.lower().replace('.', ''), 1)
+                        date_val = datetime(int(year), month, int(day)).date()
+
+                        # Parse Valor: "R$ 350,90"
+                        clean_value = value_str.replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
+                        amount_val = Decimal(clean_value)
+
+                        # Criar transação
+                        Transaction.objects.create(
+                            invoice=invoice,
+                            date=date_val,
+                            description=description.strip(),
+                            amount=abs(amount_val),
+                            is_predicted=False
+                        )
+                        transactions_created += 1
+                        dates_found.append(date_val)
+
+                    except Exception as e:
+                        continue
+
+    # Determinar ano/mês predominante
+    if dates_found:
+        month_counter = Counter((d.year, d.month) for d in dates_found)
+        most_common = month_counter.most_common(1)[0][0]
+        invoice.year = most_common[0]
+        invoice.month = most_common[1]
+        invoice.save()
+
+    return transactions_created, 0
 
 
 def process_nubank_csv(csv_file, invoice):

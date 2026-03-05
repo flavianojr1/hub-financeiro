@@ -3,12 +3,12 @@ from .models import Category, CategoryRule, CreditCard
 
 
 class CSVUploadForm(forms.Form):
-    """Form para upload de arquivo CSV"""
+    """Form para upload de arquivo CSV ou PDF (Inter)"""
     csv_file = forms.FileField(
-        label='Arquivo CSV',
-        help_text='Selecione o arquivo CSV da sua fatura do Nubank',
+        label='Arquivo de Fatura',
+        help_text='Selecione o arquivo CSV (Nubank) ou PDF (Inter) da sua fatura',
         widget=forms.FileInput(attrs={
-            'accept': '.csv',
+            'accept': '.csv,.pdf',
             'class': 'file-input',
             'id': 'csvFile'
         })
@@ -42,8 +42,9 @@ class CSVUploadForm(forms.Form):
     def clean_csv_file(self):
         file = self.cleaned_data.get('csv_file')
         if file:
-            if not file.name.endswith('.csv'):
-                raise forms.ValidationError('O arquivo deve ter extensão .csv')
+            extension = file.name.lower().split('.')[-1]
+            if extension not in ['csv', 'pdf']:
+                raise forms.ValidationError('O arquivo deve ter extensão .csv ou .pdf')
             # Limite de 5MB
             if file.size > 5 * 1024 * 1024:
                 raise forms.ValidationError('O arquivo não pode ter mais de 5MB')
