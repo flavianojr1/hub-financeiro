@@ -89,6 +89,92 @@
         font-size: 1.1rem;
     }
 
+    /* Estilos para os botões de ação estilo Sidebar */
+    .btn-action-mini {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+        padding: 0;
+        background: none;
+        line-height: 1;
+    }
+
+    .btn-action-mini i {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        width: 100%;
+        height: 100%;
+    }
+
+    .btn-action-success-mini {
+        background: rgba(16, 185, 129, 0.14);
+        border-color: rgba(16, 185, 129, 0.36);
+        color: #10b981;
+    }
+
+    .btn-action-success-mini:hover {
+        background: rgba(16, 185, 129, 0.22);
+        border-color: rgba(16, 185, 129, 0.5);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+    }
+
+    .btn-action-danger-mini {
+        background: rgba(245, 87, 108, 0.14);
+        border-color: rgba(245, 87, 108, 0.36);
+        color: #ff5e74;
+    }
+
+    .btn-action-danger-mini:hover {
+        background: rgba(245, 87, 108, 0.22);
+        border-color: rgba(245, 87, 108, 0.5);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(245, 87, 108, 0.2);
+    }
+
+    .rename-floating-form {
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        background: var(--bg-secondary);
+        padding: 6px 10px;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--border-color);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        animation: slideInRight 0.2s ease-out;
+    }
+
+    @keyframes slideInRight {
+        from { opacity: 0; transform: translateY(-50%) translateX(10px); }
+        to { opacity: 1; transform: translateY(-50%) translateX(0); }
+    }
+
+    .card-item-actions {
+        position: relative;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    /* Hover nos presets de cores */
+    .color-preset:hover {
+        transform: translateY(-4px) scale(1.1) !important;
+        box-shadow: 0 8px 15px -3px var(--hover-shadow-color, rgba(0,0,0,0.2)) !important;
+    }
+
     @media (max-width: 1024px) {
         .cards-page-layout {
             grid-template-columns: 1fr;
@@ -160,46 +246,46 @@
                         <div class="cards-colors">
                             <div style="display: none;">{{ form.color }}</div>
                             <div class="color-preset" data-color="#8A05BE"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #8A05BE; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #8A05BE; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="Nubank"></div>
                             <div class="color-preset" data-color="#FF7A00"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #FF7A00; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #FF7A00; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="Banco Inter"></div>
                             <div class="color-preset" data-color="#00A3E0"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #00A3E0; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #00A3E0; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="Banco PAN"></div>
                             <div class="color-preset" data-color="#00A7E1"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #00A7E1; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #00A7E1; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="Neon"></div>
                             <div class="color-preset" data-color="#A1C63A"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #A1C63A; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #A1C63A; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="PagBank"></div>
                             <div class="color-preset" data-color="#242424"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #242424; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #242424; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="C6 Bank"></div>
                             <div class="color-preset" data-color="#00FF5F"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #00FF5F; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #00FF5F; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="Next"></div>
                             <div class="color-preset" data-color="#EC008C"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #EC008C; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #EC008C; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="iti"></div>
                             <div class="color-preset" data-color="#00843D"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #00843D; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #00843D; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="Banco Original"></div>
                             <div class="color-preset" data-color="#005EAD"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #005EAD; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #005EAD; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="Agibank"></div>
                             <div class="color-preset" data-color="#EC0000"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #EC0000; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #EC0000; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="Santander / Bradesco"></div>
                             <div class="color-preset" data-color="#EC7000"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #EC7000; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #EC7000; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="Itaú"></div>
                             <div class="color-preset" data-color="#FCEC14"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #FCEC14; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #FCEC14; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="Banco do Brasil"></div>
                             <div class="color-preset" data-color="#005CA9"
-                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #005CA9; cursor: pointer; transition: all 0.2s;"
+                                style="width: 32px; height: 32px; border-radius: 8px; background-color: #005CA9; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
                                 title="Caixa Econômica"></div>
                         </div>
                     </div>
@@ -231,33 +317,37 @@
                 <div class="items-list">
                     {% for card in cards %}
                     <div class="cards-item">
-                        <div class="cards-item-info">
-                            <span class="cards-item-dot" style="background: {{ card.color }};"></span>
-                            <span class="cards-item-name">{{ card.name }}</span>
-                            <span class="badge badge-purple" style="font-size: 0.85rem;">{{ card.bank }}</span>
-                            <span class="badge badge-cyan">Dia {{ card.closing_day }}</span>
+                        <div class="cards-item-info" style="align-items: flex-start;">
+                            <span class="cards-item-dot" style="background: {{ card.color }}; margin-top: 6px;"></span>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <span class="cards-item-name">{{ card.name }}</span>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <span class="badge badge-purple" style="font-size: 0.75rem; padding: 2px 8px;">{{ card.bank }}</span>
+                                    <span class="badge badge-cyan" style="font-size: 0.75rem; padding: 2px 8px;">Dia {{ card.closing_day }}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-item-actions" style="display: flex; gap: 8px; align-items: center;">
+                        <div class="card-item-actions">
                             <!-- Botão Renomear -->
                             <button type="button" class="btn btn-secondary-ghost btn-sm" 
                                 onclick="toggleRename('{{ card.pk }}')" id="rename-btn-{{ card.pk }}">
                                 Renomear
                             </button>
 
-                            <!-- Formulário de Renomear (Escondido) -->
-                            <div id="rename-form-{{ card.pk }}" style="display: none; align-items: center; gap: 5px;">
-                                <form method="post" style="display: flex; align-items: center; gap: 5px; margin: 0;">
+                            <!-- Formulário de Renomear (Flutuante/Overlay) -->
+                            <div id="rename-form-{{ card.pk }}" class="rename-floating-form" style="display: none;">
+                                <form method="post" style="display: flex; align-items: center; gap: 8px; margin: 0;">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="rename_card">
                                     <input type="hidden" name="card_id" value="{{ card.pk }}">
                                     <input type="text" name="new_name" value="{{ card.name }}" 
-                                        class="form-input" style="padding: 4px 8px; font-size: 0.85rem; width: 150px;" required>
-                                    <button type="submit" class="btn btn-success-ghost btn-xs" style="padding: 4px;" title="Confirmar">
-                                        <i class="fi fi-br-check" style="font-size: 0.9rem;"></i>
+                                        class="form-input" style="padding: 6px 10px; font-size: 0.9rem; width: 160px; border-color: var(--accent-purple);" required>
+                                    <button type="submit" class="btn-action-mini btn-action-success-mini" title="Confirmar">
+                                        <i class="fi fi-br-check"></i>
                                     </button>
-                                    <button type="button" class="btn btn-danger-ghost btn-xs" style="padding: 4px;" 
+                                    <button type="button" class="btn-action-mini btn-action-danger-mini" 
                                         onclick="toggleRename('{{ card.pk }}')" title="Cancelar">
-                                        <i class="fi fi-br-cross" style="font-size: 0.8rem;"></i>
+                                        <i class="fi fi-br-cross" style="font-size: 0.75rem;"></i>
                                     </button>
                                 </form>
                             </div>
