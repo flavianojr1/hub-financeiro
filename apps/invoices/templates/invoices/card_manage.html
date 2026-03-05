@@ -237,13 +237,40 @@
                             <span class="badge badge-purple" style="font-size: 0.85rem;">{{ card.bank }}</span>
                             <span class="badge badge-cyan">Dia {{ card.closing_day }}</span>
                         </div>
-                        <form method="post" class="inline-form"
-                            onsubmit="return confirm('ATENÇÃO: Deletar o cartão \'{{ card.name }}\' apagará TODAS as faturas e transações vinculadas a ele. Tem certeza?');">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="delete_card">
-                            <input type="hidden" name="card_id" value="{{ card.pk }}">
-                            <button type="submit" class="btn btn-danger-ghost btn-sm" title="Deletar">Excluir</button>
-                        </form>
+                        <div class="card-item-actions" style="display: flex; gap: 8px; align-items: center;">
+                            <!-- Botão Renomear -->
+                            <button type="button" class="btn btn-secondary-ghost btn-sm" 
+                                onclick="toggleRename('{{ card.pk }}')" id="rename-btn-{{ card.pk }}">
+                                Renomear
+                            </button>
+
+                            <!-- Formulário de Renomear (Escondido) -->
+                            <div id="rename-form-{{ card.pk }}" style="display: none; align-items: center; gap: 5px;">
+                                <form method="post" style="display: flex; align-items: center; gap: 5px; margin: 0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="rename_card">
+                                    <input type="hidden" name="card_id" value="{{ card.pk }}">
+                                    <input type="text" name="new_name" value="{{ card.name }}" 
+                                        class="form-input" style="padding: 4px 8px; font-size: 0.85rem; width: 150px;" required>
+                                    <button type="submit" class="btn btn-success-ghost btn-xs" style="padding: 4px;" title="Confirmar">
+                                        <i class="fi fi-br-check" style="font-size: 0.9rem;"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-danger-ghost btn-xs" style="padding: 4px;" 
+                                        onclick="toggleRename('{{ card.pk }}')" title="Cancelar">
+                                        <i class="fi fi-br-cross" style="font-size: 0.8rem;"></i>
+                                    </button>
+                                </form>
+                            </div>
+
+                            <form method="post" class="inline-form"
+                                onsubmit="return confirm('ATENÇÃO: Deletar o cartão \'{{ card.name }}\' apagará TODAS as faturas e transações vinculadas a ele. Tem certeza?');"
+                                style="margin: 0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_card">
+                                <input type="hidden" name="card_id" value="{{ card.pk }}">
+                                <button type="submit" class="btn btn-danger-ghost btn-sm" title="Deletar">Excluir</button>
+                            </form>
+                        </div>
                     </div>
                     {% endfor %}
                 </div>
@@ -264,6 +291,21 @@
 
 {% block extra_js %}
 <script>
+    function toggleRename(cardId) {
+        const btn = document.getElementById(`rename-btn-${cardId}`);
+        const form = document.getElementById(`rename-form-${cardId}`);
+        
+        if (form.style.display === 'none') {
+            form.style.display = 'flex';
+            btn.style.display = 'none';
+            // Focar no input automaticamente
+            form.querySelector('input[name="new_name"]').focus();
+        } else {
+            form.style.display = 'none';
+            btn.style.display = 'block';
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         // Lista de nomes de cartões já cadastrados (case-insensitive)
         const existingCards = [];

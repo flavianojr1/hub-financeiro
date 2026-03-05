@@ -525,6 +525,20 @@ def card_manage(request):
             messages.success(request, '🗑️ Cartão deletado com sucesso. As faturas e transações atreladas também foram apagadas.')
             return redirect('card_manage')
 
+        elif action == 'rename_card':
+            card_id = request.POST.get('card_id')
+            new_name = request.POST.get('new_name', '').strip()
+            if new_name:
+                card = get_object_or_404(CreditCard, pk=card_id, user=request.user)
+                old_name = card.name
+                card.name = new_name
+                try:
+                    card.save()
+                    messages.success(request, f'✅ Cartão "{old_name}" renomeado para "{new_name}".')
+                except IntegrityError:
+                    messages.error(request, f'❌ Erro: Você já possui um cartão chamado "{new_name}".')
+            return redirect('card_manage')
+
     context = {
         'cards': cards,
         'form': form,
