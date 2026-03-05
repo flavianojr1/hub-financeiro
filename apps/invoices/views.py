@@ -182,22 +182,21 @@ def upload_invoice(request):
                 
                 # Aplicar sobreposição de período se o usuário confirmou no modal
                 if target_month and target_year:
+                    orig_month = invoice.month
+                    orig_year = invoice.year
+                    
                     invoice.month = target_month
                     invoice.year = target_year
                     invoice.save()
-                    # Atualizar datas das transações principais (não previstas) para o novo mês/ano
-                    # Mantendo o dia original
-                    from datetime import date
-                    for trans in invoice.transactions.filter(is_predicted=False):
-                        try:
-                            trans.date = date(int(target_year), int(target_month), trans.date.day)
-                            trans.save()
-                        except ValueError:
-                            # Tratar caso o dia não exista no novo mês (ex: 31 de Abril)
-                            # Ajusta para o último dia do mês
-                            import calendar
-                            last_day = calendar.monthrange(int(target_year), int(target_month))[1]
-                            trans.date = date(int(target_year), int(target_month), last_day)
+                    
+                    # Calcular o deslocamento de meses entre o detectado e o confirmado
+                    from dateutil.relativedelta import relativedelta
+                    delta_months = (int(target_year) - int(orig_year)) * 12 + (int(target_month) - int(orig_month))
+                    
+                    if delta_months != 0:
+                        # Deslocar TODAS as transações (reais e previstas) proporcionalmente
+                        for trans in invoice.transactions.all():
+                            trans.date = trans.date + relativedelta(months=delta_months)
                             trans.save()
 
                 msg = f'✅ Fatura processada! {created} transações importadas.'
