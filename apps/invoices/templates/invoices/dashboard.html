@@ -132,21 +132,49 @@
 {% else %}
 <!-- Modo geral: gráfico temporal + categorias -->
 <div class="charts-grid" style="display: grid; grid-template-columns: 55fr 45fr; gap: 1rem; margin-bottom: 1rem;">
-    <div class="chart-card" style="padding: var(--spacing-md);">
-        <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><i class="fi fi-br-chart-line-up"></i> Evolução</h2>
+    <div class="chart-card" style="padding: var(--spacing-md); position: relative;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h2 class="card-title" style="font-size: 1rem; margin: 0;"><i class="fi fi-br-chart-line-up"></i> Evolução</h2>
+            <button class="btn-expand" onclick="openChartModal('temporal')" title="Expandir gráfico">
+                <i class="fi fi-br-expand"></i>
+            </button>
+        </div>
         <div class="chart-container" style="height: 320px;">
             <canvas id="temporalChart"></canvas>
         </div>
     </div>
 
-    <div class="chart-card" style="padding: var(--spacing-md);">
-        <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><i class="fi fi-br-chart-pie"></i> Categorias</h2>
+    <div class="chart-card" style="padding: var(--spacing-md); position: relative;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h2 class="card-title" style="font-size: 1rem; margin: 0;"><i class="fi fi-br-chart-pie"></i> Categorias</h2>
+            <button class="btn-expand" onclick="openChartModal('category')" title="Expandir gráfico">
+                <i class="fi fi-br-expand"></i>
+            </button>
+        </div>
         <div class="chart-container" style="height: 320px;">
             <canvas id="categoryChart"></canvas>
         </div>
     </div>
 </div>
 {% endif %}
+
+<!-- Modal para Gráfico Expandido -->
+<div id="chartModal" class="chart-modal">
+    <div class="modal-overlay" onclick="closeChartModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle" class="modal-title"></h2>
+            <button class="btn-close-modal" onclick="closeChartModal()" title="Fechar">
+                <i class="fi fi-br-cross"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="expanded-chart-container">
+                <canvas id="expandedChartCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     // URLs para APIs

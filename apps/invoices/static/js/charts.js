@@ -1,6 +1,10 @@
 // Store chart instances globally
 let temporalChartInstance = null;
 let categoryChartInstance = null;
+let expandedChartInstance = null;
+
+// Store data globally for expansion
+let globalChartData = null;
 
 // Fetch chart data and render charts
 async function loadCharts() {
@@ -19,6 +23,9 @@ async function loadCharts() {
 
         const response = await fetch(url);
         const data = await response.json();
+        
+        // Salva dados globalmente para uso no modal
+        globalChartData = data;
 
         // Render temporal chart (only if not filtered)
         if (!data.filtered && data.temporal) {
@@ -40,11 +47,12 @@ async function loadCharts() {
 
 // Update charts with new data (for AJAX card filter)
 function updateChartsFromData(data) {
+    globalChartData = data;
+    
     // Update temporal chart if exists and data is available
     if (!data.filtered && data.temporal) {
         const temporalCanvas = document.getElementById('temporalChart');
         if (temporalCanvas) {
-            // Destroy existing chart
             if (temporalChartInstance) {
                 temporalChartInstance.destroy();
             }
@@ -55,7 +63,6 @@ function updateChartsFromData(data) {
     // Always update category chart
     const categoryCanvas = document.getElementById('categoryChart');
     if (categoryCanvas) {
-        // Destroy existing chart
         if (categoryChartInstance) {
             categoryChartInstance.destroy();
         }
@@ -75,7 +82,6 @@ function getChartColors() {
     };
 }
 
-// Cores vibrantes para categorias
 const categoryColors = [
     '#667eea', '#f5576c', '#43e97b', '#fa709a', '#fee140',
     '#30cfd0', '#a8edea', '#764ba2', '#4facfe', '#f093fb'
@@ -84,10 +90,12 @@ const categoryColors = [
 function renderTemporalChart(data) {
     const ctx = document.getElementById('temporalChart');
     if (!ctx) return;
-
     const colors = getChartColors();
+    temporalChartInstance = createTemporalChart(ctx, data, colors, false);
+}
 
-    const chartDatasets = data.datasets ? data.datasets.map(ds => ({
+function createTemporalChart(ctx, data, colors, isExpanded) {
+    const chartDatasets = data.datasets ? data.datasets.map((ds, index) => ({
         label: ds.label,
         data: ds.data,
         borderColor: ds.color || '#667eea',
@@ -103,45 +111,70 @@ function renderTemporalChart(data) {
         borderWidth: 3,
         fill: true,
         tension: 0.4,
-        pointRadius: 6,
+        pointRadius: isExpanded ? 8 : 6,
         pointBackgroundColor: ds.color || '#667eea',
         pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
-        pointHoverRadius: 8,
-        pointHoverBorderWidth: 3,
-        pointHoverBorderColor: '#ffffff'
+        datalabels: {
+            display: isExpanded && (index === data.datasets.length - 1),
+            align: 'top',
+            anchor: 'end',
+            offset: 10,
+            color: '#ffffff',
+            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+            borderRadius: 6,
+            padding: { top: 4, bottom: 4, left: 8, right: 8 },
+            font: { weight: 'bold', size: 11, family: 'Inter' },
+            textAlign: 'center',
+            formatter: (value, context) => {
+                const dataIndex = context.dataIndex;
+                let sum = 0;
+                context.chart.data.datasets.forEach(dataset => {
+                    sum += dataset.data[dataIndex] || 0;
+                });
+                return `R$ ${sum.toLocaleString('pt-BR')}`;
+            }
+        }
     })) : [{
         label: 'Gastos (R$)',
         data: data.data,
         borderColor: '#667eea',
-        backgroundColor: (ctx) => {
-            const chart = ctx.chart;
-            const { ctx: chartCtx, chartArea } = chart;
-            if (!chartArea) return 'rgba(102, 126, 234, 0.1)';
-            const gradient = chartCtx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-            gradient.addColorStop(0, 'rgba(102, 126, 234, 0)');
-            gradient.addColorStop(1, 'rgba(102, 126, 234, 0.2)');
-            return gradient;
-        },
+        backgroundColor: 'rgba(102, 126, 234, 0.1)',
         borderWidth: 3,
         fill: true,
         tension: 0.4,
-        pointRadius: 6,
-        pointBackgroundColor: '#667eea',
-        pointBorderColor: '#ffffff',
-        pointBorderWidth: 2,
-        pointHoverRadius: 8,
-        pointHoverBorderWidth: 3,
-        pointHoverBorderColor: '#ffffff'
+        pointRadius: isExpanded ? 8 : 6,
+        datalabels: {
+            display: isExpanded,
+            align: 'top',
+            anchor: 'end',
+            offset: 10,
+            color: '#ffffff',
+            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+            borderRadius: 6,
+            padding: { top: 4, bottom: 4, left: 8, right: 8 },
+            font: { weight: 'bold', size: 12 },
+            formatter: (val) => `R$ ${val.toLocaleString('pt-BR')}`
+        }
     }];
 
-    temporalChartInstance = new Chart(ctx, {
+    return new Chart(ctx, {
         type: 'line',
-        data: {
-            labels: data.labels,
-            datasets: chartDatasets
-        },
+        data: { labels: data.labels, datasets: chartDatasets },
         options: {
+            layout: {
+                padding: isExpanded ? {
+                    left: 50,
+                    right: 50,
+                    top: 50,
+                    bottom: 10
+                } : {
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0
+                }
+            },
             responsive: true,
             maintainAspectRatio: false,
             interaction: {
@@ -153,24 +186,21 @@ function renderTemporalChart(data) {
                     display: true,
                     position: 'top',
                     align: 'center',
-                    labels: {
-                        color: colors.textColor,
-                        font: { family: 'Inter', size: 12, weight: 600 },
-                        usePointStyle: true,
-                        padding: 10
+                    labels: { 
+                        color: colors.textColor, 
+                        font: { family: 'Inter', size: 12, weight: 600 }, 
+                        usePointStyle: true, 
+                        padding: isExpanded ? 5 : 10 
                     }
                 },
                 tooltip: {
+                    enabled: true,
                     backgroundColor: colors.tooltipBg,
                     titleColor: colors.tooltipTitle,
                     bodyColor: colors.tooltipBody,
                     borderColor: colors.tooltipBorder,
                     borderWidth: 1,
                     padding: 14,
-                    titleFont: { size: 14, weight: 'bold', family: 'Inter' },
-                    bodyFont: { size: 13, family: 'Inter' },
-                    cornerRadius: 8,
-                    displayColors: true,
                     callbacks: {
                         afterTitle: function(context) {
                             let sum = 0;
@@ -185,20 +215,20 @@ function renderTemporalChart(data) {
                             return ' ' + context.dataset.label + ': R$ ' + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         }
                     }
+                },
+                datalabels: {
+                    display: isExpanded
                 }
             },
             scales: {
                 y: {
                     stacked: true,
+                    display: !isExpanded,
                     beginAtZero: true,
-                    grid: {
-                        color: colors.gridColor,
-                        drawBorder: false
-                    },
-                    ticks: {
+                    grace: isExpanded ? '15%' : '0%',
+                    grid: { color: colors.gridColor, drawBorder: false },
+                    ticks: { 
                         color: colors.textColor,
-                        font: { family: 'Inter', size: 11 },
-                        padding: 10,
                         callback: function (value) {
                             return 'R$ ' + value.toLocaleString('pt-BR');
                         }
@@ -206,73 +236,57 @@ function renderTemporalChart(data) {
                 },
                 x: {
                     stacked: true,
-                    grid: {
-                        display: false,
-                        drawBorder: false
-                    },
-                    ticks: {
+                    grid: { display: false, drawBorder: false },
+                    ticks: { 
                         color: colors.textColor,
-                        font: { family: 'Inter', size: 11 },
-                        padding: 10
-                    }
-                }
-            },
-            animation: {
-                duration: 1200,
-                easing: 'easeOutQuart',
-                y: {
-                    duration: 800,
-                    from: (ctx) => {
-                        if (ctx.type === 'data' && ctx.mode === 'default') {
-                            return 0;
-                        }
+                        font: { family: 'Inter', size: isExpanded ? 12 : 11, weight: 600 },
+                        minRotation: isExpanded ? 0 : 30,
+                        maxRotation: isExpanded ? 0 : 30
                     }
                 }
             }
-        }
+        },
+        plugins: isExpanded ? [ChartDataLabels] : []
     });
 }
 
 function renderCategoryChart(data) {
     const ctx = document.getElementById('categoryChart');
     const colors = getChartColors();
+    categoryChartInstance = createCategoryChart(ctx, data, colors, false);
+}
 
-    // Pegar as 5 maiores categorias e agregar o restante em "Outros"
-    const combined = data.labels.map((label, i) => ({
-        label: label,
-        value: data.data[i]
-    }));
-    combined.sort((a, b) => b.value - a.value);
+function createCategoryChart(ctx, data, colors, isExpanded) {
+    let labels, values;
 
-    const top5 = combined.slice(0, 5);
-    const others = combined.slice(5);
-
-    const labels = top5.map(item => item.label);
-    const values = top5.map(item => item.value);
-
-    // Adicionar categoria "Outros" se houver mais categorias
-    if (others.length > 0) {
-        const othersSum = others.reduce((sum, item) => sum + item.value, 0);
-        labels.push('Outros');
-        values.push(othersSum);
+    if (!isExpanded) {
+        const combined = data.labels.map((label, i) => ({ label: label, value: data.data[i] }));
+        combined.sort((a, b) => b.value - a.value);
+        const top5 = combined.slice(0, 5);
+        const others = combined.slice(5);
+        labels = top5.map(item => item.label);
+        values = top5.map(item => item.value);
+        if (others.length > 0) {
+            labels.push('Outros');
+            values.push(others.reduce((sum, item) => sum + item.value, 0));
+        }
+    } else {
+        labels = data.labels;
+        values = data.data;
     }
 
-    // Calcular total para percentual
     const total = values.reduce((a, b) => a + b, 0);
 
-    categoryChartInstance = new Chart(ctx, {
+    return new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Gastos por Categoria (R$)',
+                label: 'Gastos (R$)',
                 data: values,
                 backgroundColor: labels.map((_, i) => categoryColors[i % categoryColors.length]),
                 borderRadius: 8,
-                borderSkipped: false,
-                barPercentage: 0.8,
-                categoryPercentage: 0.9,
-                maxBarThickness: 80
+                maxBarThickness: isExpanded ? 100 : 80
             }]
         },
         options: {
@@ -283,71 +297,25 @@ function renderCategoryChart(data) {
                 datalabels: {
                     anchor: 'end',
                     align: 'top',
-                    color: colors.textColor,
-                    font: {
-                        family: 'Inter',
-                        size: 14,
-                        weight: 'bold'
-                    },
-                    formatter: function (value) {
-                        return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    },
-                    offset: 4
-                },
-                tooltip: {
-                    backgroundColor: colors.tooltipBg,
-                    titleColor: colors.tooltipTitle,
-                    bodyColor: colors.tooltipBody,
-                    borderColor: colors.tooltipBorder,
-                    borderWidth: 1,
-                    padding: 14,
-                    titleFont: { size: 14, weight: 'bold', family: 'Inter' },
-                    bodyFont: { size: 13, family: 'Inter' },
-                    cornerRadius: 8,
-                    callbacks: {
-                        label: function (context) {
-                            const value = context.parsed.y;
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return ' R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ' (' + percentage + '%)';
-                        }
-                    }
+                    color: isExpanded ? '#ffffff' : colors.textColor,
+                    backgroundColor: isExpanded ? 'rgba(102, 126, 234, 0.8)' : 'transparent',
+                    borderRadius: isExpanded ? 6 : 0,
+                    padding: isExpanded ? { top: 4, bottom: 4, left: 8, right: 8 } : 0,
+                    font: { weight: 'bold', size: isExpanded ? 13 : 12 },
+                    formatter: (val) => 'R$ ' + val.toLocaleString('pt-BR')
                 }
             },
             scales: {
-                x: {
-                    grid: {
-                        display: false,
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: colors.textColor,
-                        font: { family: 'Inter', size: 12, weight: '500' },
-                        padding: 10,
-                        maxRotation: 0,
-                        minRotation: 0
-                    }
+                x: { 
+                    grid: { display: false, drawBorder: false },
+                    ticks: { 
+                        color: colors.textColor, 
+                        font: { family: 'Inter', size: isExpanded ? 12 : 11, weight: 600 } 
+                    } 
                 },
-                y: {
-                    beginAtZero: true,
-                    display: false,
-                    grace: '15%',
-                    grid: {
-                        display: false,
-                        drawBorder: false
-                    },
-                    ticks: {
-                        display: false
-                    }
-                }
-            },
-            animation: {
-                duration: 1000,
-                easing: 'easeOutQuart',
-                delay: (context) => {
-                    if (context.type === 'data' && context.mode === 'default') {
-                        return context.dataIndex * 100;
-                    }
-                    return 0;
+                y: { 
+                    display: false, 
+                    grace: isExpanded ? '20%' : '15%' 
                 }
             }
         },
@@ -355,5 +323,43 @@ function renderCategoryChart(data) {
     });
 }
 
-// Load charts when page loads
+// Modal Functions
+function openChartModal(type) {
+    const modal = document.getElementById('chartModal');
+    const canvas = document.getElementById('expandedChartCanvas');
+    const title = document.getElementById('modalTitle');
+    const colors = getChartColors();
+
+    if (!globalChartData) return;
+
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // Prevent scroll
+
+    if (expandedChartInstance) expandedChartInstance.destroy();
+
+    if (type === 'temporal') {
+        title.innerHTML = '<i class="fi fi-br-chart-line-up"></i> Evolução Detalhada de Gastos';
+        expandedChartInstance = createTemporalChart(canvas, globalChartData.temporal, colors, true);
+    } else {
+        title.innerHTML = '<i class="fi fi-br-chart-pie"></i> Distribuição Completa por Categoria';
+        expandedChartInstance = createCategoryChart(canvas, globalChartData.category, colors, true);
+    }
+}
+
+function closeChartModal() {
+    const modal = document.getElementById('chartModal');
+    modal.classList.add('closing');
+    
+    // Aguarda o tempo da animação (300ms) definida no CSS
+    setTimeout(() => {
+        modal.style.display = 'none';
+        modal.classList.remove('closing');
+        document.body.style.overflow = 'auto';
+        if (expandedChartInstance) {
+            expandedChartInstance.destroy();
+            expandedChartInstance = null;
+        }
+    }, 300);
+}
+
 document.addEventListener('DOMContentLoaded', loadCharts);
