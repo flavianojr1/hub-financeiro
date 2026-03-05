@@ -103,8 +103,11 @@ class Transaction(models.Model):
         """Categoriza automaticamente baseado nas regras de palavra-chave do banco"""
         desc_lower = self.description.lower()
 
-        # Buscar todas as regras ordenadas por prioridade
-        rules = CategoryRule.objects.select_related('category').order_by('-priority')
+        # Buscar regras apenas do usuário dono desta transação (via invoice)
+        user = self.invoice.user if self.invoice else None
+        
+        # Se não houver usuário, buscar regras globais (user=None) ou retornar vazio
+        rules = CategoryRule.objects.filter(user=user).select_related('category').order_by('-priority')
 
         for rule in rules:
             if rule.keyword.lower() in desc_lower:
