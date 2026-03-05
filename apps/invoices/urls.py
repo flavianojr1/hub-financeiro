@@ -11,4 +11,5 @@ urlpatterns = [
     path('cartoes/', views.card_manage, name='card_manage'),
     path('api/chart-data/', views.get_chart_data, name='chart_data'),
     path('api/stats-data/', views.get_stats_data, name='stats_data'),
+    path('api/transactions-data/', views.get_transactions_data, name='transactions_data'),
 ]

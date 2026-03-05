@@ -208,9 +208,11 @@
     }
 
     // Função para atualizar KPIs via AJAX
-    async function updateStatsAJAX(card) {
+    async function updateStatsAJAX(card, month) {
         try {
-            const response = await fetch(STATS_API_URL + card);
+            let url = STATS_API_URL + card;
+            if (month) url += '&month=' + month;
+            const response = await fetch(url);
             const data = await response.json();
 
             // Obter elementos
@@ -232,41 +234,93 @@
         }
     }
 
+    // URL para API de transações
+    const TRANSACTIONS_API_URL = '{% url "transactions_data" %}?card=';
+
+    // Função para atualizar lista de lançamentos via AJAX
+    async function updateTransactionsAJAX(card, month) {
+        const transactionsContainer = document.getElementById('transactionsContainer');
+        const monthlySummaryContainer = document.getElementById('monthlySummaryContainer');
+        
+        console.log('updateTransactionsAJAX called:', { card, month, transactionsContainer: !!transactionsContainer });
+        
+        if (!transactionsContainer || !month) {
+            // Sem container ou sem mês selecionado - mostrar resumo mensal, ocultar lançamentos
+            if (monthlySummaryContainer) {
+                monthlySummaryContainer.style.display = 'block';
+            }
+            if (transactionsContainer) {
+                transactionsContainer.style.display = 'none';
+            }
+            return;
+        }
+
+        try {
+            let url = TRANSACTIONS_API_URL + card + '&month=' + month;
+            console.log('Fetching transactions from:', url);
+            const response = await fetch(url);
+            const data = await response.json();
+            console.log('Transactions data:', data);
+
+            const tableContainer = transactionsContainer.querySelector('.table-responsive');
+            if (!tableContainer) {
+                console.error('Table container not found');
+                return;
+            }
+
+            if (data.transactions && data.transactions.length > 0) {
+                let html = '<table class="table"><thead><tr><th style="font-size: 0.7rem;">Data</th><th style="font-size: 0.7rem;">Descrição</th><th style="font-size: 0.7rem;">Valor</th></tr></thead><tbody>';
+                data.transactions.forEach(t => {
+                    html += '<tr><td style="font-size: 0.8rem;">' + t.date + '</td><td style="font-size: 0.8rem;">' + t.description + '</td><td style="font-size: 0.8rem;"><strong>R$ ' + t.amount.toLocaleString('pt-BR') + '</strong></td></tr>';
+                });
+                html += '</tbody></table>';
+                tableContainer.innerHTML = html;
+            } else {
+                tableContainer.innerHTML = '<p style="padding: 1rem; text-align: center; color: var(--text-secondary);">Nenhuma transação neste mês.</p>';
+            }
+
+            // Ocultar resumo mensal, mostrar lançamentos
+            if (monthlySummaryContainer) {
+                monthlySummaryContainer.style.display = 'none';
+            }
+            transactionsContainer.style.display = 'block';
+        } catch (error) {
+            console.error('Erro ao buscar transações:', error);
+        }
+    }
+
     function updateDashboardFilters() {
         const month = document.getElementById('monthSelector').value;
         const card = document.getElementById('cardSelector') ? document.getElementById('cardSelector').value : '';
 
-        // Se o mês não mudou, usamos AJAX independente do cartão
-        const monthChanged = month !== currentMonth;
+        updateStatsAJAX(card, month);
+        updateChartsAJAX(card, month);
+        updateTransactionsAJAX(card, month);
 
-        if (!monthChanged) {
-            // Mês não mudou - usar AJAX
-            updateStatsAJAX(card);
-            updateChartsAJAX(card, month);
+        // Atualizar URL sem recarregar
+        let url = '{% url "dashboard" %}?';
+        if (month) url += 'month=' + month + '&';
+        if (card) url += 'card=' + card;
+        window.history.pushState({}, '', url);
 
-            // Atualizar URL sem recarregar
-            let url = '{% url "dashboard" %}?';
-            if (month) url += 'month=' + month + '&';
-            if (card) url += 'card=' + card;
-            window.history.pushState({}, '', url);
+        // Atualizar variáveis
+        currentCard = card;
+        currentMonth = month;
+        SELECTED_CARD = card;
+        SELECTED_MONTH = month;
 
-            // Atualizar variáveis
-            currentCard = card;
-            currentMonth = month;
-            SELECTED_CARD = card;
-            SELECTED_MONTH = month;
-        } else {
-            // Mês mudou - recarregar página normalmente
-            sessionStorage.setItem('dashboardScrollY', window.scrollY);
-
-            let url = '{% url "dashboard" %}?';
-            if (month) url += 'month=' + month + '&';
-            if (card) url += 'card=' + card;
-            window.location = url;
-        }
+        // Atualizar classe das linhas do resumo mensal
+        document.querySelectorAll('#monthlySummaryTable tbody tr').forEach(row => {
+            const rowMonth = row.getAttribute('data-month');
+            if (month && rowMonth === month) {
+                row.classList.add('row-selected');
+            } else {
+                row.classList.remove('row-selected');
+            }
+        });
     }
 
-    // Função para atualizar gráficos via AJAX
+    // Função para atualizar gráficos via AJAX - sempre busca evolução global
     async function updateChartsAJAX(card, month) {
         try {
             let url = CHART_API_URL + card;
@@ -275,7 +329,7 @@
             const response = await fetch(url);
             const data = await response.json();
 
-            // Atualizar gráficos globalmente
+            // Atualizar gráficos
             if (typeof updateChartsFromData === 'function') {
                 updateChartsFromData(data);
             }
@@ -283,52 +337,63 @@
             console.error('Erro ao buscar dados de gráficos:', error);
         }
     }
-
-    // Restaurar o scroll depois da página carregar (quando vier de um filtro)
-    window.addEventListener('load', () => {
-        const scrollY = sessionStorage.getItem('dashboardScrollY');
-        if (scrollY !== null) {
-            window.scrollTo({ top: parseInt(scrollY), behavior: 'instant' });
-            sessionStorage.removeItem('dashboardScrollY');
-        }
-    });
 </script>
 
-<!-- Resumo Mensal - Compacted -->
+<style>
+    #transactionsContainer {
+        transition: opacity 0.2s ease-in-out;
+        opacity: 0;
+    }
+    #monthlySummaryContainer {
+        transition: opacity 0.2s ease-in-out;
+    }
+</style>
+
+<!-- Resumo Mensal / Lançamentos -->
 <div class="card" style="padding: var(--spacing-md);">
-    <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><i class="fi fi-br-list"></i> Resumo Mensal</h2>
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th style="font-size: 0.7rem;">Mês</th>
-                    <th style="font-size: 0.7rem;">Transações</th>
-                    <th style="font-size: 0.7rem;">Total Gasto</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for m in monthly_list %}
-                <tr
-                    class="{% if selected_month == m.key %}row-selected{% endif %}{% if m.is_current %} row-current{% endif %}">
-                    <td style="font-size: 0.8rem;"><strong>{{ m.label }}</strong></td>
-                    <td style="font-size: 0.8rem;">{{ m.total_transactions }}</td>
-                    <td style="font-size: 0.8rem;"><strong>R$ {{ m.total_amount|floatformat:2 }}</strong></td>
-                    <td>
-                        {% if selected_month == m.key %}
-                        <a href="javascript:void(0)"
-                            onclick="document.getElementById('monthSelector').value=''; updateDashboardFilters();"
-                            class="btn btn-secondary btn-xs">Voltar</a>
-                        {% else %}
-                        <a href="javascript:void(0)"
-                            onclick="document.getElementById('monthSelector').value='{{ m.key }}'; updateDashboardFilters();"
-                            class="btn btn-primary btn-xs">Ver</a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Resumo Mensal (visível quando não há mês selecionado) -->
+    <div id="monthlySummaryContainer">
+        <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><i class="fi fi-br-list"></i> Resumo Mensal</h2>
+        <div class="table-responsive">
+            <table class="table" id="monthlySummaryTable">
+                <thead>
+                    <tr>
+                        <th style="font-size: 0.7rem;">Mês</th>
+                        <th style="font-size: 0.7rem;">Transações</th>
+                        <th style="font-size: 0.7rem;">Total Gasto</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in monthly_list %}
+                    <tr data-month="{{ m.key }}"
+                        class="{% if selected_month == m.key %}row-selected{% endif %}{% if m.is_current %} row-current{% endif %}">
+                        <td style="font-size: 0.8rem;"><strong>{{ m.label }}</strong></td>
+                        <td style="font-size: 0.8rem;">{{ m.total_transactions }}</td>
+                        <td style="font-size: 0.8rem;"><strong>R$ {{ m.total_amount|floatformat:2 }}</strong></td>
+                        <td>
+                            {% if selected_month == m.key %}
+                            <a href="javascript:void(0)"
+                                onclick="document.getElementById('monthSelector').value=''; updateDashboardFilters();"
+                                class="btn btn-secondary btn-xs">Voltar</a>
+                            {% else %}
+                            <a href="javascript:void(0)"
+                                onclick="document.getElementById('monthSelector').value='{{ m.key }}'; updateDashboardFilters();"
+                                class="btn btn-primary btn-xs">Ver</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Lançamentos do mês selecionado (substitui o resumo quando há mês selecionado) -->
+    <div id="transactionsContainer" style="display: none;">
+        <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><i class="fi fi-br-list"></i> Lançamentos do Mês</h2>
+        <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+        </div>
     </div>
 </div>
 
@@ -353,9 +418,16 @@
 <script
     src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script>
-    const SELECTED_MONTH = '{{ selected_month|default:"" }}';
-    const SELECTED_CARD = '{{ selected_card|default:"" }}';
+    let SELECTED_MONTH = '{{ selected_month|default:"" }}';
+    let SELECTED_CARD = '{{ selected_card|default:"" }}';
     const IS_FILTERED = {% if filtered %}true{% else %} false{% endif %};
+    
+    // Carregar transações se houver mês selecionado na carga inicial
+    document.addEventListener('DOMContentLoaded', function() {
+        if (SELECTED_MONTH) {
+            updateTransactionsAJAX(SELECTED_CARD, SELECTED_MONTH);
+        }
+    });
 </script>
 <script src="{% static 'js/charts.js' %}?v={% now 'U' %}"></script>
 {% endif %}

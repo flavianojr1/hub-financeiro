@@ -27,8 +27,8 @@ async function loadCharts() {
         // Salva dados globalmente para uso no modal
         globalChartData = data;
 
-        // Render temporal chart (only if not filtered)
-        if (!data.filtered && data.temporal) {
+        // Always render temporal chart (shows global data)
+        if (data.temporal) {
             const temporalCanvas = document.getElementById('temporalChart');
             if (temporalCanvas) {
                 renderTemporalChart(data.temporal);
@@ -49,8 +49,8 @@ async function loadCharts() {
 function updateChartsFromData(data) {
     globalChartData = data;
     
-    // Update temporal chart if exists and data is available
-    if (!data.filtered && data.temporal) {
+    // Always update temporal chart (shows global data regardless of month filter)
+    if (data.temporal) {
         const temporalCanvas = document.getElementById('temporalChart');
         if (temporalCanvas) {
             if (temporalChartInstance) {

@@ -350,6 +350,9 @@ def category_manage(request):
 @login_required
 def get_chart_data(request):
     """API para retornar dados dos gráficos em JSON"""
+    from datetime import date
+    today = date.today()
+    
     transactions = Transaction.objects.filter(invoice__user=request.user)
 
     selected_card = request.GET.get('card')
@@ -360,32 +363,35 @@ def get_chart_data(request):
             pass
 
     selected_month = request.GET.get('month')
-    filtered = False
 
-    if selected_month:
+    # Se não há mês selecionado, usar mês atual
+    if not selected_month:
+        target_year = today.year
+        target_month = today.month
+    else:
         try:
             parts = selected_month.split('-')
-            filter_year = int(parts[0])
-            filter_month = int(parts[1])
-            transactions = transactions.filter(date__year=filter_year, date__month=filter_month)
-            filtered = True
+            target_year = int(parts[0])
+            target_month = int(parts[1])
         except (ValueError, IndexError):
-            pass
+            target_year = today.year
+            target_month = today.month
 
-    category = get_category_data(transactions)
+    # Categorias filtradas pelo mês (atual ou selecionado)
+    category_transactions = transactions.filter(date__year=target_year, date__month=target_month)
+    category = get_category_data(category_transactions)
 
-    result = {'category': category, 'filtered': filtered}
-
-    if not filtered:
-        temporal = get_temporal_data(transactions)
-        result['temporal'] = temporal
+    # Temporal sempre mostra todos os dados (global)
+    temporal = get_temporal_data(transactions)
+    
+    result = {'category': category, 'temporal': temporal, 'filtered': bool(selected_month)}
 
     return JsonResponse(result)
 
 
 @login_required
 def get_stats_data(request):
-    """API para retornar KPIs do mês atual em JSON"""
+    """API para retornar KPIs do mês filtrado ou atual em JSON"""
     all_transactions = Transaction.objects.filter(invoice__user=request.user)
     
     selected_card = request.GET.get('card')
@@ -399,24 +405,80 @@ def get_stats_data(request):
     from datetime import date
     today = date.today()
     
-    # KPIs do mês atual
-    current_month_transactions = all_transactions.filter(
-        date__year=today.year, 
-        date__month=today.month
+    selected_month = request.GET.get('month')
+    
+    if selected_month:
+        try:
+            parts = selected_month.split('-')
+            filter_year = int(parts[0])
+            filter_month = int(parts[1])
+            target_year = filter_year
+            target_month = filter_month
+        except (ValueError, IndexError):
+            target_year = today.year
+            target_month = today.month
+    else:
+        target_year = today.year
+        target_month = today.month
+    
+    # KPIs do mês alvo (filtrado ou atual)
+    target_month_transactions = all_transactions.filter(
+        date__year=target_year, 
+        date__month=target_month
     )
-    current_month_amount = current_month_transactions.aggregate(Sum('amount'))['amount__sum'] or 0
-    current_month_count = current_month_transactions.count()
+    target_month_amount = target_month_transactions.aggregate(Sum('amount'))['amount__sum'] or 0
+    target_month_count = target_month_transactions.count()
     
     # KPIs globais (para média)
     total_amount = all_transactions.aggregate(Sum('amount'))['amount__sum'] or 0
     total_transactions = all_transactions.count()
     
     result = {
-        'total_transactions': current_month_count,
-        'total_amount': float(current_month_amount),
+        'total_transactions': target_month_count,
+        'total_amount': float(target_month_amount),
         'avg_amount': float(total_amount / total_transactions) if total_transactions > 0 else 0,
     }
     
+    return JsonResponse(result)
+
+
+@login_required
+def get_transactions_data(request):
+    """API para retornar lista de transações filtradas por mês e cartão"""
+    transactions = Transaction.objects.filter(invoice__user=request.user)
+
+    selected_card = request.GET.get('card')
+    if selected_card:
+        try:
+            transactions = transactions.filter(invoice__credit_card_id=int(selected_card))
+        except ValueError:
+            pass
+
+    selected_month = request.GET.get('month')
+    if selected_month:
+        try:
+            parts = selected_month.split('-')
+            filter_year = int(parts[0])
+            filter_month = int(parts[1])
+            transactions = transactions.filter(date__year=filter_year, date__month=filter_month)
+        except (ValueError, IndexError):
+            pass
+
+    transactions_list = transactions.order_by('-date', 'description').values(
+        'date', 'description', 'amount'
+    )
+
+    result = {
+        'transactions': [
+            {
+                'date': t['date'].strftime('%d/%m') if t['date'] else '',
+                'description': t['description'] or '',
+                'amount': float(t['amount']) if t['amount'] else 0
+            }
+            for t in transactions_list
+        ]
+    }
+
     return JsonResponse(result)
 
 
