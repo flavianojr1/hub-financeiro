@@ -248,9 +248,11 @@
             // Sem container ou sem mês selecionado - mostrar resumo mensal, ocultar lançamentos
             if (monthlySummaryContainer) {
                 monthlySummaryContainer.style.display = 'block';
+                setTimeout(() => monthlySummaryContainer.style.opacity = '1', 50);
             }
             if (transactionsContainer) {
-                transactionsContainer.style.display = 'none';
+                transactionsContainer.style.opacity = '0';
+                setTimeout(() => transactionsContainer.style.display = 'none', 200);
             }
             return;
         }
@@ -271,7 +273,7 @@
             if (data.transactions && data.transactions.length > 0) {
                 let html = '<table class="table"><thead><tr><th style="font-size: 0.7rem;">Data</th><th style="font-size: 0.7rem;">Descrição</th><th style="font-size: 0.7rem;">Valor</th></tr></thead><tbody>';
                 data.transactions.forEach(t => {
-                    html += '<tr><td style="font-size: 0.8rem;">' + t.date + '</td><td style="font-size: 0.8rem;">' + t.description + '</td><td style="font-size: 0.8rem;"><strong>R$ ' + t.amount.toLocaleString('pt-BR') + '</strong></td></tr>';
+                    html += '<tr><td style="font-size: 0.8rem;">' + t.date + '</td><td style="font-size: 0.8rem;">' + t.description + '</td><td style="font-size: 0.8rem;"><strong>R$ ' + t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong></td></tr>';
                 });
                 html += '</tbody></table>';
                 tableContainer.innerHTML = html;
@@ -281,9 +283,11 @@
 
             // Ocultar resumo mensal, mostrar lançamentos
             if (monthlySummaryContainer) {
-                monthlySummaryContainer.style.display = 'none';
+                monthlySummaryContainer.style.opacity = '0';
+                setTimeout(() => monthlySummaryContainer.style.display = 'none', 200);
             }
             transactionsContainer.style.display = 'block';
+            setTimeout(() => transactionsContainer.style.opacity = '1', 50);
         } catch (error) {
             console.error('Erro ao buscar transações:', error);
         }
