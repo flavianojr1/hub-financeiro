@@ -147,12 +147,112 @@
         letter-spacing: 1px;
     }
 
+    /* Gráficos Laterais Hero */
+    .hero-content-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .side-chart-wrapper {
+        width: 200px; /* Reduzido de 240px */
+        height: 140px; /* Reduzido de 160px */
+        position: absolute;
+        top: 50%;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .side-chart {
+        width: 100%;
+        height: 100%;
+        padding: 12px;
+        opacity: 0.4;
+        transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    @keyframes sideFloat {
+        0% { transform: translateY(-50%) perspective(1000px); }
+        50% { transform: translateY(-80%) perspective(1000px); }
+        100% { transform: translateY(-50%) perspective(1000px); }
+    }
+
+    @keyframes sideFloatRight {
+        0% { transform: translateY(-50%) perspective(1000px); }
+        50% { transform: translateY(-85%) perspective(1000px); }
+        100% { transform: translateY(-50%) perspective(1000px); }
+    }
+
+    .side-chart-wrapper-left {
+        left: 0px;
+        animation: sideFloat 7s ease-in-out infinite;
+    }
+
+    .side-chart-wrapper-right {
+        right: 0px;
+        animation: sideFloatRight 8s ease-in-out infinite;
+    }
+
+    .side-chart-left {
+        transform: rotateY(35deg) rotateX(10deg);
+    }
+
+    .side-chart-right {
+        transform: rotateY(-35deg) rotateX(10deg);
+    }
+
+    @media (min-width: 1400px) {
+        .side-chart { opacity: 0.6; }
+        .side-chart-wrapper-left { left: 40px; } /* Ajustado para não apertar o texto */
+        .side-chart-wrapper-right { right: 40px; }
+        
+        .side-chart:hover {
+            opacity: 1;
+            transform: rotateY(0deg) rotateX(0deg) scale(1.15);
+            z-index: 10;
+            box-shadow: 0 20px 50px rgba(138, 5, 190, 0.4);
+        }
+        
+        .side-chart-wrapper:has(.side-chart:hover) {
+            animation-play-state: paused;
+        }
+    }
+
+    /* Scroll Animation for Elements */
+    .reveal-on-scroll {
+        opacity: 0;
+        transform: translateY(100px);
+        transition: all 1.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .reveal-on-scroll.active {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .stagger-1 { transition-delay: 0.4s; }
+    .stagger-2 { transition-delay: 0.8s; }
+    .stagger-3 { transition-delay: 1.2s; }
+    .stagger-4 { transition-delay: 1.6s; }
+
+    @media (max-width: 1200px) {
+        .side-chart-wrapper { display: none; }
+    }
+
     .hero h1 {
         font-size: clamp(2.8rem, 6vw, 4.5rem);
         font-weight: 800;
         line-height: 1.1;
         margin-bottom: 1.5rem;
-        max-width: 900px;
+        max-width: 800px; /* Reduzido de 900px */
         margin-left: auto;
         margin-right: auto;
     }
@@ -310,7 +410,25 @@
 <section class="hero">
     <div class="hero-bg-glow"></div>
     <div class="hero-badge animate-in">✨ Inteligência Financeira 2026</div>
-    <h1 class="animate-in delay-1"><span class="text-gradient">Suas finanças:</span> <br><span class="purple-gradient">Inteligentes e Automáticas.</span></h1>
+    <div class="hero-content-wrapper animate-in delay-1">
+        <!-- Gráfico Esquerdo (Evolução Simplificada) -->
+        <div class="side-chart-wrapper side-chart-wrapper-left">
+            <div class="glass-card side-chart side-chart-left">
+                <canvas id="sideChartLeft"></canvas>
+            </div>
+        </div>
+
+        <div style="flex: 1; z-index: 2;">
+            <h1><span class="text-gradient">Suas finanças:</span> <br><span class="purple-gradient">Inteligentes e Automáticas.</span></h1>
+        </div>
+
+        <!-- Gráfico Direito (Categorias Simplificado) -->
+        <div class="side-chart-wrapper side-chart-wrapper-right">
+            <div class="glass-card side-chart side-chart-right">
+                <canvas id="sideChartRight"></canvas>
+            </div>
+        </div>
+    </div>
     <p class="animate-in delay-2">Importe faturas Nubank (CSV) e Inter (PDF) automaticamente. O sistema projeta seus gastos futuros e organiza tudo para você.</p>
     
     <div class="animate-in delay-3" style="display: flex; gap: 1rem; justify-content: center;">
@@ -392,7 +510,7 @@
                 <li class="comp-item"><i class="fi fi-br-check-circle"></i> Multi-cartões com cores customizáveis</li>
             </ul>
         </div>
-        <div style="text-align: center; height: 400px; position: relative;">
+        <div class="reveal-on-scroll" style="text-align: center; height: 400px; position: relative;">
             <div class="glass-card" style="padding: 2rem; height: 100%; display: flex; flex-direction: column;">
                 <h3 style="font-size: 1rem; margin-bottom: 1.5rem; text-align: left; opacity: 0.7;">📊 Distribuição por Categoria</h3>
                 <div style="flex: 1; position: relative;">
@@ -436,95 +554,174 @@
         else header.classList.remove('scrolled');
     });
 
-    // Mock Chart
-    document.addEventListener('DOMContentLoaded', () => {
-        const ctxHero = document.getElementById('heroPreviewChart').getContext('2d');
-        
-        new Chart(ctxHero, {
-            type: 'bar',
-            data: {
-                labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
-                datasets: [
-                    {
-                        label: 'Gasto Real',
-                        data: [4200, 5420, 0, 0, 0, 0],
-                        backgroundColor: '#8A05BE',
-                        borderRadius: 8,
-                        barThickness: 30,
-                    },
-                    {
-                        label: 'Projeção (Parcelas)',
-                        data: [0, 0, 3100, 2800, 2150, 1800],
-                        backgroundColor: 'rgba(0, 242, 254, 0.3)',
-                        borderColor: '#00f2fe',
-                        borderWidth: 1,
-                        borderRadius: 8,
-                        barThickness: 30,
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: { color: '#9ca3af', font: { family: 'Inter', size: 11 } }
-                    },
-                    tooltip: { enabled: false }
+    // Charts Configuration Objects
+    const heroChartConfig = {
+        type: 'bar',
+        data: {
+            labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+            datasets: [
+                {
+                    label: 'Gasto Real',
+                    data: [4200, 5420, 0, 0, 0, 0],
+                    backgroundColor: '#8A05BE',
+                    borderRadius: 8,
+                    barThickness: 30,
                 },
-                scales: {
-                    y: { 
-                        beginAtZero: true, 
-                        grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: '#4b5563', font: { size: 10 } }
-                    },
-                    x: { 
-                        grid: { display: false },
-                        ticks: { color: '#9ca3af', font: { size: 11 } }
-                    }
+                {
+                    label: 'Projeção (Parcelas)',
+                    data: [0, 0, 3100, 2800, 2150, 1800],
+                    backgroundColor: 'rgba(0, 242, 254, 0.3)',
+                    borderColor: '#00f2fe',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    barThickness: 30,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 2000, easing: 'easeOutQuart' },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: { color: '#9ca3af', font: { family: 'Inter', size: 11 } }
+                },
+                tooltip: { enabled: false }
+            },
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#4b5563', font: { size: 10 } }
+                },
+                x: { 
+                    grid: { display: false },
+                    ticks: { color: '#9ca3af', font: { size: 11 } }
                 }
             }
-        });
+        }
+    };
 
-        const ctxCategory = document.getElementById('categoryPreviewChart').getContext('2d');
-        new Chart(ctxCategory, {
-            type: 'bar',
-            data: {
-                labels: ['Alimentação', 'Mercado', 'Lazer', 'Assinaturas', 'Transporte'],
-                datasets: [{
-                    data: [1250, 980, 750, 420, 380],
-                    backgroundColor: [
-                        '#f5576c', '#43e97b', '#fa709a', '#fee140', '#4facfe'
-                    ],
-                    borderRadius: 10,
-                    borderSkipped: false,
-                    barThickness: 25
-                }]
+    const categoryChartConfig = {
+        type: 'bar',
+        data: {
+            labels: ['Alimentação', 'Mercado', 'Lazer', 'Assinaturas', 'Transporte'],
+            datasets: [{
+                data: [1250, 980, 750, 420, 380],
+                backgroundColor: ['#f5576c', '#43e97b', '#fa709a', '#fee140', '#4facfe'],
+                borderRadius: 10,
+                borderSkipped: false,
+                barThickness: 25
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 2000, delay: 500 },
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
             },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: false }
-                },
-                scales: {
-                    x: { 
-                        display: false,
-                        grid: { display: false }
-                    },
-                    y: { 
-                        grid: { display: false },
-                        ticks: { 
-                            color: '#f9fafb',
-                            font: { family: 'Inter', size: 13, weight: '600' }
-                        }
-                    }
+            scales: {
+                x: { display: false, grid: { display: false } },
+                y: { 
+                    grid: { display: false },
+                    ticks: { color: '#f9fafb', font: { family: 'Inter', size: 13, weight: '600' } }
                 }
             }
+        }
+    };
+
+    // Intersection Observer for Scroll Animations and Lazy Chart Loading
+    document.addEventListener('DOMContentLoaded', () => {
+        const observerOptions = { threshold: 0.4 };
+        const renderedCharts = new Set();
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    
+                    // Render ALL charts inside the intersecting container
+                    const canvases = entry.target.querySelectorAll('canvas');
+                    canvases.forEach(canvas => {
+                        if (!renderedCharts.has(canvas.id)) {
+                            renderChartById(canvas.id);
+                            renderedCharts.add(canvas.id);
+                        }
+                    });
+                }
+            });
+        }, observerOptions);
+
+        function renderChartById(id) {
+            const canvas = document.getElementById(id);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            // Atraso específico para o dashboard mockup principal
+            if (id === 'heroPreviewChart') {
+                setTimeout(() => new Chart(ctx, heroChartConfig), 1000);
+                return;
+            }
+
+            if (id === 'categoryPreviewChart') {
+                new Chart(ctx, categoryChartConfig);
+                return;
+            }
+
+            if (id === 'sideChartLeft') {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['', '', '', '', '', ''],
+                        datasets: [{
+                            data: [30, 45, 35, 60, 40, 70],
+                            borderColor: '#8A05BE',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            fill: true,
+                            backgroundColor: 'rgba(138, 5, 190, 0.1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 2000, easing: 'easeInOutQuart' },
+                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                        scales: { x: { display: false }, y: { display: false } }
+                    }
+                });
+            }
+            if (id === 'sideChartRight') {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['A', 'B', 'C'],
+                        datasets: [{
+                            data: [60, 25, 15],
+                            backgroundColor: ['#8A05BE', '#00f2fe', '#f5576c'],
+                            borderWidth: 0,
+                            cutout: '70%'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { animateRotate: true, duration: 2000, easing: 'easeInOutQuart' },
+                        plugins: { legend: { display: false }, tooltip: { enabled: false } }
+                    }
+                });
+            }
+        }
+
+        document.querySelectorAll('.reveal-on-scroll, .mockup-container, .feature-card, .comparison, .hero-content-wrapper').forEach((el) => {
+            el.classList.add('reveal-on-scroll');
+            observer.observe(el);
         });
     });
 </script>
