@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="apps/invoices/static/img/hub-financeiro-wide-v2.png" alt="Hub Financeiro" width="600" />
+<img src="apps/invoices/static/img/hub-financeiro-wide-texto-branco-v2-removebg-preview.png" alt="Hub Financeiro" width="600" />
 
 # 💰 Hub Financeiro
 
@@ -32,30 +32,31 @@ Ideal para quem busca **privacidade total** (dados 100% locais) e **automação 
 ### 📂 Importação Inteligente
 - **Nubank (CSV)**: Importação nativa direta do extrato do app.
 - **Banco Inter (PDF)**: Leitura automática de faturas em PDF com extração de tabelas e datas de vencimento.
-- **Confirmação de Período**: Modal inteligente que detecta o mês/ano no nome do arquivo e solicita sua confirmação.
+- **Confirmação de Período**: Modal inteligente que detecta o mês/ano no nome do arquivo e solicita sua confirmação manual.
 
 ### 🔮 Projeção de Futuro
 - **Detecção de Parcelas**: O sistema identifica padrões como `Parcela 01/10` e gera automaticamente previsões para os próximos meses.
-- **Deduplicação Ativa**: Evita dados duplicados ao substituir previsões por gastos reais confirmados em novos uploads.
+- **Deduplicação Ativa**: Algoritmo inteligente que substitui previsões por gastos reais confirmados, evitando dados duplicados em múltiplos uploads.
 
 ### 🏷️ Categorização Automática
 - **Motor de Regras**: Crie regras baseadas em palavras-chave (ex: `iFood` ➔ `Alimentação`).
-- **Kit de Boas-Vindas**: Novos usuários já começam com categorias e regras padrão pré-configuradas.
+- **Kit de Boas-Vindas**: Novos usuários já começam com categorias e regras padrão (Uber, Netflix, etc.) pré-configuradas.
 
 ### 📊 Dashboard Dinâmico
 - **KPIs em Tempo Real**: Total gasto, média de transações e contagem mensal.
-- **Gráficos Interativos**: Evolução temporal empilhada por cartão e distribuição por categoria via Chart.js.
+- **Gráficos Interativos**: Evolução temporal e distribuição por categoria via Chart.js.
 - **Filtros Ágeis**: Slicers de mês e cartão com atualização via AJAX (sem recarregar a página).
 
 ---
 
-## 🎨 Interface Modernizada
+## 🎨 Interface Vision
 
-A UI foi construída com foco em **UX/UI profissional**, utilizando CSS Vanilla para performance e flexibilidade:
+A UI foi construída sob a estética **Vision**, focada em uma experiência premium e fluida:
 
-- 🌓 **Temas**: Suporte a modo Claro e Escuro.
-- 📱 **Responsivo**: Totalmente adaptado para desktop e dispositivos móveis.
-- ⚡ **Interatividade**: Transições suaves, animações de rotação em ícones e overlays de edição inline.
+- 🌓 **Temas Dinâmicos**: Suporte nativo a temas **Claro (Padrão)** e **Escuro**, com persistência local.
+- 📱 **Responsividade Total**: Interface adaptada para qualquer tamanho de tela.
+- 🌪️ **Coreografia Visual**: Animações de slide-up majestosas, efeitos de Glassmorphism e gráficos 3D flutuantes no Hero.
+- ⚡ **Micro-interações**: Feedback tátil em botões, transições de perspectiva no hover e ícones animados.
 
 ---
 
@@ -91,15 +92,15 @@ A UI foi construída com foco em **UX/UI profissional**, utilizando CSS Vanilla 
 
 ## 💎 Diferenciais Técnicos
 
-- **Arquitetura Core/Apps**: Separação clara entre configurações globais e lógica de negócio.
-- **Ponto de Entrada Único**: O arquivo `main.py` centraliza todos os comandos administrativos do Django.
-- **Deduplicação de Transações**: Algoritmo que garante integridade dos dados mesmo com múltiplos uploads do mesmo período.
-- **Extratividade Robusta**: Uso de Regex e `pdfplumber` para lidar com layouts complexos de faturas bancárias.
+- **Arquitetura Core/Apps**: Separação clara entre infraestrutura e lógica de negócio.
+- **Ponto de Entrada Único**: O arquivo `main.py` centraliza todos os comandos administrativos.
+- **Deduplicação de Transações**: Integridade de dados garantida por cruzamento de chaves únicas.
+- **Extratividade Robusta**: Motor baseado em Regex e `pdfplumber` para layouts complexos.
 
 ---
 
 <div align="center">
 
-Desenvolvido com ❤️ por **[Flaviano Junior](https://www.linkedin.com/in/flaviano-junior)**
+Desenvolvido com muito carinho ❤️ por **[Flaviano Junior](https://www.linkedin.com/in/flaviano-junior)**
 
 </div>
