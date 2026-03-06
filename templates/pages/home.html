@@ -66,13 +66,39 @@
 
     .nav-links a {
         text-decoration: none;
-        color: var(--text-secondary);
-        font-weight: 500;
+        color: var(--hub-purple);
+        font-weight: 600;
         font-size: 0.95rem;
-        transition: color 0.3s;
+        transition: all 0.3s ease;
     }
 
-    .nav-links a:hover { color: var(--text-highlight); }
+    .nav-links a:hover { 
+        color: var(--hub-purple);
+        opacity: 0.8;
+        transform: translateY(-1px);
+    }
+
+    .theme-toggle-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border-glass);
+        cursor: pointer;
+        color: var(--hub-purple);
+        font-size: 1.2rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.6rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px var(--shadow-glass);
+    }
+
+    .theme-toggle-btn:hover {
+        transform: scale(1.1);
+        background: var(--hub-purple);
+        color: #fff;
+        box-shadow: 0 0 20px rgba(138, 5, 190, 0.3);
+    }
 
     .btn {
         padding: 0.8rem 1.8rem;
@@ -456,13 +482,13 @@
         <a href="#about">Sobre</a>
     </nav>
     <div class="auth-buttons" style="display: flex; align-items: center; gap: 1.5rem;">
-        <button id="themeToggle" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 1.2rem; transition: color 0.3s; display: flex; align-items: center; justify-content: center; padding: 0.5rem; border-radius: 50%;" aria-label="Alternar tema">
+        <button id="themeToggle" class="theme-toggle-btn" aria-label="Alternar tema">
             <i class="fi fi-sr-moon" id="themeIcon"></i>
         </button>
         {% if user.is_authenticated %}
             <a href="{% url 'dashboard' %}" class="btn btn-primary">Meu Dashboard <i class="fi fi-br-arrow-right"></i></a>
         {% else %}
-            <a href="{% url 'login' %}" style="color: var(--text-primary); text-decoration: none; font-weight: 600;">Entrar</a>
+            <a href="{% url 'login' %}" style="color: var(--hub-purple); text-decoration: none; font-weight: 600;">Entrar</a>
             <a href="{% url 'signup' %}" class="btn btn-primary btn-glow">Começar Agora</a>
         {% endif %}
     </div>
