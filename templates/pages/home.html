@@ -6,6 +6,10 @@
 {% block extra_css %}
 <style>
     /* Animações */
+    html {
+        scroll-behavior: smooth;
+    }
+
     @keyframes fadeInUp {
         from { opacity: 0; transform: translateY(30px); }
         to { opacity: 1; transform: translateY(0); }
@@ -483,7 +487,7 @@
             <h3>Importação Mágica</h3>
             <p>Esqueça o preenchimento manual. Suba o CSV do Nubank ou o PDF do Inter e veja a mágica acontecer em segundos.</p>
         </div>
-        <div class="glass-card feature-card">
+        <div class="glass-card feature-card" id="projections">
             <div class="feature-icon"><i class="fi fi-br-time-forward"></i></div>
             <h3>Projeção de Futuro</h3>
             <p>Nosso algoritmo identifica compras parceladas e projeta o impacto no seu orçamento dos próximos 12 meses.</p>
