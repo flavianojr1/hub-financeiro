@@ -193,12 +193,12 @@
 
     .side-chart-wrapper-left {
         left: 0px;
-        animation: sideFloat 5.6s ease-in-out infinite;
+        animation: sideFloat 3s ease-in-out infinite;
     }
 
     .side-chart-wrapper-right {
         right: 0px;
-        animation: sideFloatRight 6.4s ease-in-out infinite;
+        animation: sideFloatRight 4s ease-in-out infinite;
     }
 
     .side-chart-left {
@@ -819,7 +819,7 @@
             
             // Atraso específico para o dashboard mockup principal
             if (id === 'heroPreviewChart') {
-                setTimeout(() => new Chart(ctx, heroChartConfig), 1000);
+                setTimeout(() => new Chart(ctx, heroChartConfig), 400);
                 return;
             }
 
