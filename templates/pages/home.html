@@ -792,7 +792,10 @@
 
     // Intersection Observer for Scroll Animations and Lazy Chart Loading
     document.addEventListener('DOMContentLoaded', () => {
-        const observerOptions = { threshold: 0.4 };
+        const observerOptions = { 
+            threshold: 0.2,
+            rootMargin: "0px 0px -50px 0px" // Dispara um pouco antes para dar tempo da animação
+        };
         const renderedCharts = new Set();
 
         const observer = new IntersectionObserver((entries) => {
