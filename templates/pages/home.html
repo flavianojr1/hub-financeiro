@@ -1,517 +1,531 @@
 {% extends 'base_landing.html' %}
 {% load static %}
 
-{% block title %}Hub Financeiro — Controle suas Finanças Nubank{% endblock %}
+{% block title %}Hub Financeiro — Inteligência e Previsão para o seu Bolso{% endblock %}
 
-{% block content %}
+{% block extra_css %}
 <style>
-    :root {
-        --primary: #667eea;
-        --primary-dark: #764ba2;
-        --primary-hover: #5a6fd1;
-        --accent-pink: #f5576c;
-        --accent-cyan: #0891b2;
-        --success: #10b981;
-        --warning: #f59e0b;
-        --bg-dark: #f0f2f8;
-        --bg-dark-soft: #f5f6fa;
-        --card-bg: #ffffff;
-        --text-main: #1a202c;
-        --text-sec: #64748b;
-        --grad-main: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --grad-pink: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        --grad-cyan: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    /* Animações */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        font-family: 'Inter', -apple-system, sans-serif;
+    @keyframes float {
+        0% { transform: translateY(0px) rotateX(10deg); }
+        50% { transform: translateY(-20px) rotateX(12deg); }
+        100% { transform: translateY(0px) rotateX(10deg); }
     }
 
-    body {
-        background-color: var(--bg-dark);
-        color: var(--text-main);
-        line-height: 1.6;
-        overflow-x: hidden;
-        scroll-behavior: smooth;
+    @keyframes pulse-glow {
+        0% { box-shadow: 0 0 0 0 rgba(138, 5, 190, 0.4); }
+        70% { box-shadow: 0 0 0 15px rgba(138, 5, 190, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(138, 5, 190, 0); }
     }
 
-    /* HEADER FIXO */
+    .animate-in {
+        animation: fadeInUp 0.8s ease-out forwards;
+    }
+
+    .delay-1 { animation-delay: 0.2s; }
+    .delay-2 { animation-delay: 0.4s; }
+    .delay-3 { animation-delay: 0.6s; }
+
+    /* Layout */
+    .section-padding { padding: 100px 5%; }
+
+    /* Header */
     header {
         position: fixed;
         top: 0;
         width: 100%;
-        padding: 1.25rem 5%;
+        padding: 1.5rem 5%;
         display: flex;
         justify-content: space-between;
         align-items: center;
         z-index: 1000;
-        transition: 0.3s;
+        transition: all 0.3s ease;
     }
 
     header.scrolled {
-        background: rgba(255, 255, 255, 0.92);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    }
-
-    .logo {
-        font-size: 1.5rem;
-        font-weight: 800;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        text-decoration: none;
-        color: var(--text-main);
+        background: rgba(3, 7, 18, 0.8);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border-glass);
+        padding: 1rem 5%;
     }
 
     .logo img {
-        height: 40px;
+        height: 65px;
         width: auto;
     }
 
-    nav {
+    .nav-links {
         display: flex;
-        gap: 2rem;
+        gap: 2.5rem;
     }
 
-    nav a {
+    .nav-links a {
         text-decoration: none;
-        color: var(--text-sec);
+        color: var(--text-secondary);
         font-weight: 500;
-        transition: 0.3s;
+        font-size: 0.95rem;
+        transition: color 0.3s;
     }
 
-    nav a:hover {
-        color: var(--primary);
-    }
-
-    .auth-buttons {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-    }
+    .nav-links a:hover { color: #fff; }
 
     .btn {
-        padding: 0.75rem 1.5rem;
-        border-radius: 12px;
+        padding: 0.8rem 1.8rem;
+        border-radius: 14px;
         font-weight: 600;
         text-decoration: none;
-        transition: 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-primary {
+        background: var(--hub-purple);
+        color: #fff;
         border: none;
-        font-size: 1rem;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.1);
+        box-shadow: 0 10px 25px rgba(138, 5, 190, 0.4);
+    }
+
+    .btn-glow {
+        animation: pulse-glow 2s infinite;
     }
 
     .btn-outline {
-        border: 2px solid var(--primary);
-        color: var(--text-main);
-        background: transparent;
+        border: 1px solid var(--border-glass);
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
     }
 
     .btn-outline:hover {
-        background: var(--primary);
-        color: white;
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.3);
     }
 
-    .btn-grad {
-        background: var(--grad-main);
-        color: white;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    }
-
-    .btn-grad:hover {
-        transform: translateY(-2px);
-        filter: brightness(1.1);
-    }
-
-    /* HERO SECTION */
+    /* Hero */
     .hero {
-        padding: 180px 5% 100px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
         position: relative;
+        padding: 180px 5% 80px;
+        text-align: center;
+        overflow: hidden;
+    }
+
+    .hero-bg-glow {
+        position: absolute;
+        top: -100px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 600px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(138, 5, 190, 0.15) 0%, rgba(3, 7, 18, 0) 70%);
+        filter: blur(80px);
+        z-index: -1;
     }
 
     .hero-badge {
-        background: rgba(102, 126, 234, 0.1);
-        color: var(--primary);
+        display: inline-flex;
         padding: 6px 16px;
-        border-radius: 24px;
-        font-size: 0.875rem;
+        background: rgba(138, 5, 190, 0.1);
+        border: 1px solid rgba(138, 5, 190, 0.2);
+        border-radius: 100px;
+        color: var(--hub-purple);
         font-weight: 700;
+        font-size: 0.85rem;
         margin-bottom: 2rem;
-        border: 1px solid rgba(102, 126, 234, 0.2);
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
 
     .hero h1 {
-        font-size: clamp(2.5rem, 5vw, 4rem);
-        max-width: 900px;
-        margin-bottom: 1.5rem;
+        font-size: clamp(2.8rem, 6vw, 4.5rem);
+        font-weight: 800;
         line-height: 1.1;
+        margin-bottom: 1.5rem;
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .hero p {
-        color: var(--text-sec);
+        color: var(--text-secondary);
         font-size: 1.25rem;
-        max-width: 600px;
-        margin-bottom: 2.5rem;
+        max-width: 650px;
+        margin: 0 auto 3rem;
+        line-height: 1.6;
     }
 
-    .hero-mockup {
-        width: 100%;
-        max-width: 1000px;
-        background: var(--card-bg);
-        border-radius: 24px;
-        padding: 20px;
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+    /* Dashboard Mockup */
+    .mockup-container {
+        perspective: 1500px;
         margin-top: 4rem;
     }
 
+    .mockup-card {
+        width: 100%;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 30px;
+        transform: rotateX(10deg);
+        animation: float 6s ease-in-out infinite;
+        box-shadow: 0 30px 100px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-glass);
+    }
+
     .mockup-header {
-        height: 30px;
         display: flex;
-        gap: 8px;
-        margin-bottom: 20px;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
     }
 
-    .circle {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
+    .mockup-dots { display: flex; gap: 8px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    .mockup-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-bottom: 2rem;
     }
 
-    /* GRID FUNCIONALIDADES */
-    .features {
-        padding: 100px 5%;
+    .mock-stat-item {
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 16px;
+        text-align: left;
     }
 
-    .section-title {
-        text-align: center;
-        margin-bottom: 4rem;
-    }
+    .mock-stat-label { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 5px; }
+    .mock-stat-value { font-size: 1.2rem; font-weight: 700; }
 
-    .section-title p {
-        color: var(--text-sec);
-        margin-top: 1rem;
-        font-size: 1.1rem;
-    }
-
+    /* Features */
     .feature-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 2rem;
-    }
-
-    .card {
-        background: var(--card-bg);
-        padding: 2.5rem;
-        border-radius: 20px;
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        transition: 0.3s ease;
-    }
-
-    .card:hover {
-        transform: translateY(-8px);
-        border-color: var(--primary);
-        box-shadow: 0 14px 30px rgba(102, 126, 234, 0.12);
-    }
-
-    .card-icon {
-        font-size: 2.5rem;
-        margin-bottom: 1.5rem;
-        display: block;
-    }
-
-    .card h3 {
-        font-size: 1.3rem;
-        margin-bottom: 0.75rem;
-    }
-
-    .card p {
-        color: var(--text-sec);
-        line-height: 1.7;
-    }
-
-    /* COMO FUNCIONA */
-    .how-it-works {
-        padding: 100px 5%;
-        background: var(--bg-dark-soft);
-    }
-
-    .steps {
-        display: flex;
-        justify-content: center;
-        gap: 3rem;
-        flex-wrap: wrap;
         margin-top: 4rem;
     }
 
-    .step {
-        flex: 1;
-        min-width: 250px;
-        text-align: center;
+    .feature-card {
+        padding: 3rem 2.5rem;
+        text-align: left;
+        transition: all 0.4s ease;
     }
 
-    .step-number {
+    .feature-card:hover {
+        transform: translateY(-10px);
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(138, 5, 190, 0.3);
+    }
+
+    .feature-icon {
         width: 56px;
         height: 56px;
-        background: var(--grad-main);
-        border-radius: 50%;
+        border-radius: 16px;
+        background: rgba(138, 5, 190, 0.1);
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 1.5rem;
-        font-weight: 800;
-        font-size: 1.2rem;
+        font-size: 1.5rem;
+        color: var(--hub-purple);
+        margin-bottom: 1.5rem;
     }
 
-    .step h3 {
-        font-size: 1.2rem;
-        margin-bottom: 0.75rem;
-    }
+    .feature-card h3 { font-size: 1.4rem; margin-bottom: 1rem; }
+    .feature-card p { color: var(--text-secondary); line-height: 1.7; }
 
-    .step p {
-        color: var(--text-sec);
-    }
-
-    /* STATS */
-    .stats {
-        padding: 80px 5%;
+    /* Comparison */
+    .comparison { background: #050a18; border-radius: 40px; margin: 0 5%; }
+    
+    .comp-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 2rem;
-        text-align: center;
+        grid-template-columns: 1fr 1fr;
+        gap: 4rem;
+        align-items: center;
     }
 
-    .stat h3 {
-        font-size: 2rem;
-        background: var(--grad-main);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin-bottom: 0.5rem;
-    }
-
-    .stat p {
-        color: var(--text-sec);
-        font-weight: 500;
-    }
-
-    /* CTA FINAL */
-    .cta-final {
-        padding: 100px 5%;
-        text-align: center;
-        background: var(--grad-main);
-        margin: 0 5% 5%;
-        border-radius: 24px;
-    }
-
-    .cta-final h2 {
-        font-size: 2.5rem;
-        margin-bottom: 1rem;
-    }
-
-    .cta-final p {
-        margin-bottom: 2.5rem;
-        opacity: 0.9;
-        font-size: 1.1rem;
-    }
-
-    footer {
-        padding: 60px 5% 40px;
-        text-align: center;
-        color: var(--text-sec);
-        font-size: 0.9rem;
-        border-top: 1px solid rgba(0, 0, 0, 0.08);
-    }
-
-    footer .footer-links {
-        margin: 1.5rem 0;
+    .comp-list { list-style: none; margin-top: 2rem; }
+    .comp-item {
         display: flex;
-        justify-content: center;
-        gap: 2rem;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 1.2rem;
+        color: var(--text-secondary);
+    }
+    .comp-item i { color: var(--hub-purple); }
+
+    /* Footer */
+    footer {
+        padding: 80px 5% 40px;
+        border-top: 1px solid var(--border-glass);
+        text-align: center;
     }
 
-    footer a {
-        color: var(--text-sec);
-        text-decoration: none;
-        transition: color 0.3s;
-    }
+    .footer-logo { margin-bottom: 2rem; opacity: 0.8; }
+    .footer-links { display: flex; justify-content: center; gap: 3rem; margin-bottom: 3rem; }
+    .footer-links a { color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+    .footer-links a:hover { color: #fff; }
 
-    footer a:hover {
-        color: var(--primary);
-    }
-
-    /* RESPONSIVIDADE */
     @media (max-width: 768px) {
-        nav { display: none; }
-        .hero h1 { font-size: 2.5rem; }
-        .steps { flex-direction: column; align-items: center; }
-        .auth-buttons { gap: 0.5rem; }
-        .btn { padding: 0.6rem 1.1rem; font-size: 0.9rem; }
-        .cta-final { margin: 0 0 5%; border-radius: 0; }
+        .nav-links { display: none; }
+        .hero h1 { font-size: 2.8rem; }
+        .mockup-stats { grid-template-columns: 1fr; }
+        .comp-grid { grid-template-columns: 1fr; gap: 2rem; }
     }
 </style>
+{% endblock %}
 
+{% block content %}
 <!-- HEADER -->
 <header id="mainHeader">
     <a href="{% url 'home' %}" class="logo">
-        <img src="{% static 'img/hub-financeiro-logo.png' %}" alt="Hub Financeiro">
+        <img src="{% static 'img/hub-financeiro-wide-texto-branco-v2-removebg-preview.png' %}" alt="Hub Financeiro">
     </a>
-    <nav>
-        <a href="#features">Funcionalidades</a>
-        <a href="#how">Como Funciona</a>
-        <a href="#start">Começar</a>
+    <nav class="nav-links">
+        <a href="#features">Recursos</a>
+        <a href="#projections">Projeções</a>
+        <a href="#security">Segurança</a>
     </nav>
     <div class="auth-buttons">
         {% if user.is_authenticated %}
-            <a href="{% url 'dashboard' %}" class="btn btn-grad">Ir para o Dashboard</a>
+            <a href="{% url 'dashboard' %}" class="btn btn-primary">Meu Dashboard <i class="fi fi-br-arrow-right"></i></a>
         {% else %}
-            <a href="{% url 'login' %}" class="btn btn-outline">Entrar</a>
-            <a href="{% url 'signup' %}" class="btn btn-grad">Cadastrar</a>
+            <a href="{% url 'login' %}" style="color: #fff; text-decoration: none; font-weight: 600; margin-right: 1.5rem;">Entrar</a>
+            <a href="{% url 'signup' %}" class="btn btn-primary btn-glow">Começar Agora</a>
         {% endif %}
     </div>
 </header>
 
 <!-- HERO -->
 <section class="hero">
-    <div class="hero-badge">✨ 100% gratuito para usuários Nubank</div>
-    <h1>Controle total das suas finanças Nubank</h1>
-    <p>Importe seu CSV, categorize transações automaticamente e visualize seu futuro financeiro com gráficos inteligentes.</p>
-    <div class="auth-buttons">
-        {% if user.is_authenticated %}
-            <a href="{% url 'dashboard' %}" class="btn btn-grad" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Acessar Dashboard</a>
-        {% else %}
-            <a href="{% url 'signup' %}" class="btn btn-grad" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Começar Agora — é grátis</a>
-            <a href="#features" class="btn btn-outline" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Ver Funcionalidades</a>
-        {% endif %}
+    <div class="hero-bg-glow"></div>
+    <div class="hero-badge animate-in">✨ Inteligência Financeira 2026</div>
+    <h1 class="animate-in delay-1"><span class="text-gradient">Suas finanças:</span> <br><span class="purple-gradient">Inteligentes e Automáticas.</span></h1>
+    <p class="animate-in delay-2">Importe faturas Nubank (CSV) e Inter (PDF) automaticamente. O sistema projeta seus gastos futuros e organiza tudo para você.</p>
+    
+    <div class="animate-in delay-3" style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="{% url 'signup' %}" class="btn btn-primary btn-glow" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Criar conta gratuita</a>
+        <a href="#features" class="btn btn-outline" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Como funciona</a>
     </div>
 
-    <!-- Mockup simulado de dashboard -->
-    <div class="hero-mockup">
-        <div class="mockup-header">
-            <div class="circle" style="background: #ff5f56;"></div>
-            <div class="circle" style="background: #ffbd2e;"></div>
-            <div class="circle" style="background: #27c93f;"></div>
-        </div>
-        <div style="height: 300px; display: flex; align-items: flex-end; justify-content: space-around; padding: 20px; gap: 8px;">
-            <div style="flex:1; height: 40%; background: var(--grad-main); border-radius: 8px 8px 0 0;"></div>
-            <div style="flex:1; height: 65%; background: var(--grad-pink); border-radius: 8px 8px 0 0;"></div>
-            <div style="flex:1; height: 90%; background: var(--grad-cyan); border-radius: 8px 8px 0 0;"></div>
-            <div style="flex:1; height: 55%; background: var(--grad-main); border-radius: 8px 8px 0 0;"></div>
-            <div style="flex:1; height: 75%; background: var(--grad-pink); border-radius: 8px 8px 0 0;"></div>
-            <div style="flex:1; height: 50%; background: var(--grad-cyan); border-radius: 8px 8px 0 0;"></div>
+    <!-- MOCKUP DASHBOARD -->
+    <div class="mockup-container animate-in delay-3">
+        <div class="glass-card mockup-card">
+            <div class="mockup-header">
+                <div class="mockup-dots">
+                    <div class="dot" style="background: #ff5f56;"></div>
+                    <div class="dot" style="background: #ffbd2e;"></div>
+                    <div class="dot" style="background: #27c93f;"></div>
+                </div>
+                <div style="font-size: 0.8rem; font-weight: 600; opacity: 0.5;">HUB FINANCEIRO / DASHBOARD</div>
+            </div>
+            
+            <div class="mockup-stats">
+                <div class="mock-stat-item">
+                    <div class="mock-stat-label">Total Gasto (Mês)</div>
+                    <div class="mock-stat-value" style="color: var(--hub-purple);">R$ 5.420,80</div>
+                </div>
+                <div class="mock-stat-item">
+                    <div class="mock-stat-label">Transações</div>
+                    <div class="mock-stat-value">42</div>
+                </div>
+                <div class="mock-stat-item">
+                    <div class="mock-stat-label">Projeção Futura</div>
+                    <div class="mock-stat-value" style="color: var(--hub-cyan);">R$ 2.150,00</div>
+                </div>
+            </div>
+
+            <div style="height: 280px; width: 100%;">
+                <canvas id="heroPreviewChart"></canvas>
+            </div>
         </div>
     </div>
 </section>
 
-<!-- FUNCIONALIDADES -->
-<section class="features" id="features">
-    <div class="section-title">
-        <h2 style="font-size: 2.5rem;">Funcionalidades de Elite</h2>
-        <p>Tudo o que você precisa para dominar seus gastos.</p>
+<!-- FEATURES -->
+<section class="section-padding" id="features">
+    <div style="text-align: center; margin-bottom: 4rem;">
+        <h2 class="text-gradient" style="font-size: 2.5rem; margin-bottom: 1rem;">O que o Hub faz por você?</h2>
+        <p style="color: var(--text-secondary);">Tecnologia de ponta para simplificar sua vida financeira.</p>
     </div>
+
     <div class="feature-grid">
-        <div class="card">
-            <span class="card-icon">📊</span>
-            <h3>Gráficos Detalhados</h3>
-            <p>Visualize gastos por categoria e evolução mensal com gráficos interativos movidos a Chart.js.</p>
+        <div class="glass-card feature-card">
+            <div class="feature-icon"><i class="fi fi-br-magic-wand"></i></div>
+            <h3>Importação Mágica</h3>
+            <p>Esqueça o preenchimento manual. Suba o CSV do Nubank ou o PDF do Inter e veja a mágica acontecer em segundos.</p>
         </div>
-        <div class="card">
-            <span class="card-icon">🏷️</span>
-            <h3>Auto-categorização</h3>
-            <p>Crie regras inteligentes por palavras-chave para classificar suas compras automaticamente.</p>
+        <div class="glass-card feature-card">
+            <div class="feature-icon"><i class="fi fi-br-time-forward"></i></div>
+            <h3>Projeção de Futuro</h3>
+            <p>Nosso algoritmo identifica compras parceladas e projeta o impacto no seu orçamento dos próximos 12 meses.</p>
         </div>
-        <div class="card">
-            <span class="card-icon">🔮</span>
-            <h3>Previsão de Parcelas</h3>
-            <p>O sistema identifica compras parceladas (ex: 2/10) e projeta seus gastos para os próximos meses.</p>
-        </div>
-    </div>
-</section>
-
-<!-- COMO FUNCIONA -->
-<section class="how-it-works" id="how">
-    <div class="section-title">
-        <h2 style="font-size: 2.5rem;">Como Funciona</h2>
-        <p>Em 3 passos simples você já tem controle total.</p>
-    </div>
-    <div class="steps">
-        <div class="step">
-            <div class="step-number">1</div>
-            <h3>📤 Importe o CSV</h3>
-            <p>Baixe a fatura no app do Nubank e suba o arquivo aqui.</p>
-        </div>
-        <div class="step">
-            <div class="step-number">2</div>
-            <h3>🏷️ Categorização</h3>
-            <p>As transações são categorizadas automaticamente pelas suas regras.</p>
-        </div>
-        <div class="step">
-            <div class="step-number">3</div>
-            <h3>📈 Domine seus Dados</h3>
-            <p>Analise gráficos, insights e economize dinheiro de verdade.</p>
+        <div class="glass-card feature-card">
+            <div class="feature-icon"><i class="fi fi-br-shield-check"></i></div>
+            <h3>Segurança & Local</h3>
+            <p>Seus dados são seus. Processamento focado em privacidade, garantindo total controle sobre sua vida financeira.</p>
         </div>
     </div>
 </section>
 
-<!-- STATS -->
-<section class="stats">
-    <div class="stat">
-        <h3>100%</h3>
-        <p>Gratuito</p>
-    </div>
-    <div class="stat">
-        <h3>🌙 ☀️</h3>
-        <p>Tema Claro e Escuro</p>
-    </div>
-    <div class="stat">
-        <h3>Auto</h3>
-        <p>Categorização Automática</p>
-    </div>
-    <div class="stat">
-        <h3>📊</h3>
-        <p>Gráficos Interativos</p>
+<!-- COMPARISON / WHY US -->
+<section class="section-padding comparison" id="security">
+    <div class="comp-grid">
+        <div>
+            <h2 class="text-gradient" style="font-size: 2.8rem; margin-bottom: 1.5rem;">Saia da planilha estática.</h2>
+            <p style="color: var(--text-secondary); font-size: 1.1rem;">Planilhas não "conversam" com suas faturas bancárias. O Hub Financeiro automatiza o fluxo de dados e te dá previsibilidade real.</p>
+            
+            <ul class="comp-list">
+                <li class="comp-item"><i class="fi fi-br-check-circle"></i> Categorização automática por palavras-chave</li>
+                <li class="comp-item"><i class="fi fi-br-check-circle"></i> Deduplicação inteligente de lançamentos</li>
+                <li class="comp-item"><i class="fi fi-br-check-circle"></i> Dashboard com filtros instantâneos (AJAX)</li>
+                <li class="comp-item"><i class="fi fi-br-check-circle"></i> Multi-cartões com cores customizáveis</li>
+            </ul>
+        </div>
+        <div style="text-align: center; height: 400px; position: relative;">
+            <div class="glass-card" style="padding: 2rem; height: 100%; display: flex; flex-direction: column;">
+                <h3 style="font-size: 1rem; margin-bottom: 1.5rem; text-align: left; opacity: 0.7;">📊 Distribuição por Categoria</h3>
+                <div style="flex: 1; position: relative;">
+                    <canvas id="categoryPreviewChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
 <!-- CTA FINAL -->
-<div class="cta-final" id="start">
-    <h2>Pronto para ter controle das suas finanças?</h2>
-    <p>Junte-se a usuários que já organizaram a vida financeira.</p>
-    {% if user.is_authenticated %}
-        <a href="{% url 'dashboard' %}" class="btn" style="background: white; color: var(--primary-dark); padding: 1.2rem 3rem; font-weight: 700; border-radius: 12px;">Acessar meu Dashboard</a>
-    {% else %}
-        <a href="{% url 'signup' %}" class="btn" style="background: white; color: var(--primary-dark); padding: 1.2rem 3rem; font-weight: 700; border-radius: 12px;">Criar conta gratuita</a>
-    {% endif %}
-</div>
+<section class="section-padding" style="text-align: center;">
+    <div class="glass-card" style="padding: 5rem 2rem; background: linear-gradient(135deg, rgba(138, 5, 190, 0.1) 0%, rgba(3, 7, 18, 0.8) 100%);">
+        <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem;">Pronto para organizar seu futuro?</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 3rem; max-width: 500px; margin-left: auto; margin-right: auto;">Junte-se a usuários que já possuem clareza total sobre seus gastos parcelados.</p>
+        <a href="{% url 'signup' %}" class="btn btn-primary btn-glow" style="padding: 1.2rem 3.5rem; font-size: 1.2rem;">Começar Agora — Grátis</a>
+    </div>
+</section>
 
 <!-- FOOTER -->
 <footer>
-    <p style="font-size: 1.1rem; font-weight: 600;">📊 Hub Financeiro — Gestão Inteligente para Nubank</p>
-    <div class="footer-links">
-        <a href="https://github.com/flavianojr1/hub-financeiro" target="_blank">GitHub</a>
-        <a href="{% url 'login' %}">Entrar</a>
-        <a href="{% url 'signup' %}">Cadastrar</a>
+    <div class="footer-logo">
+        <img src="{% static 'img/hub-financeiro-wide-texto-branco-v2-removebg-preview.png' %}" alt="Hub Financeiro" style="height: 60px;">
     </div>
-    <p>© 2026 Hub Financeiro. Todos os direitos reservados.</p>
+    <div class="footer-links">
+        <a href="#features">Recursos</a>
+        <a href="#security">Segurança</a>
+        <a href="https://github.com/flavianojr1/hub-financeiro" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/flaviano-junior" target="_blank">LinkedIn</a>
+    </div>
+    <p style="color: var(--text-secondary); font-size: 0.85rem;">© 2026 Hub Financeiro. Made with ❤️ by Flaviano Junior.</p>
 </footer>
 
+<!-- Chart.js para o Preview -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-    // Efeito de scroll no header
+    // Header Scroll Effect
     window.addEventListener('scroll', () => {
         const header = document.getElementById('mainHeader');
-        if (window.scrollY > 50) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
-        }
+        if (window.scrollY > 50) header.classList.add('scrolled');
+        else header.classList.remove('scrolled');
+    });
+
+    // Mock Chart
+    document.addEventListener('DOMContentLoaded', () => {
+        const ctxHero = document.getElementById('heroPreviewChart').getContext('2d');
+        
+        new Chart(ctxHero, {
+            type: 'bar',
+            data: {
+                labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                datasets: [
+                    {
+                        label: 'Gasto Real',
+                        data: [4200, 5420, 0, 0, 0, 0],
+                        backgroundColor: '#8A05BE',
+                        borderRadius: 8,
+                        barThickness: 30,
+                    },
+                    {
+                        label: 'Projeção (Parcelas)',
+                        data: [0, 0, 3100, 2800, 2150, 1800],
+                        backgroundColor: 'rgba(0, 242, 254, 0.3)',
+                        borderColor: '#00f2fe',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        barThickness: 30,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: { color: '#9ca3af', font: { family: 'Inter', size: 11 } }
+                    },
+                    tooltip: { enabled: false }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#4b5563', font: { size: 10 } }
+                    },
+                    x: { 
+                        grid: { display: false },
+                        ticks: { color: '#9ca3af', font: { size: 11 } }
+                    }
+                }
+            }
+        });
+
+        const ctxCategory = document.getElementById('categoryPreviewChart').getContext('2d');
+        new Chart(ctxCategory, {
+            type: 'bar',
+            data: {
+                labels: ['Alimentação', 'Mercado', 'Lazer', 'Assinaturas', 'Transporte'],
+                datasets: [{
+                    data: [1250, 980, 750, 420, 380],
+                    backgroundColor: [
+                        '#f5576c', '#43e97b', '#fa709a', '#fee140', '#4facfe'
+                    ],
+                    borderRadius: 10,
+                    borderSkipped: false,
+                    barThickness: 25
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                scales: {
+                    x: { 
+                        display: false,
+                        grid: { display: false }
+                    },
+                    y: { 
+                        grid: { display: false },
+                        ticks: { 
+                            color: '#f9fafb',
+                            font: { family: 'Inter', size: 13, weight: '600' }
+                        }
+                    }
+                }
+            }
+        });
     });
 </script>
 {% endblock %}
