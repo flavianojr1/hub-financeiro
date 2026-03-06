@@ -1,121 +1,105 @@
 <div align="center">
 
-<img src="apps/invoices/static/img/hub-financeiro-wide-v2.png" alt="Hub Financeiro" width="500" />
+<img src="apps/invoices/static/img/hub-financeiro-wide-v2.png" alt="Hub Financeiro" width="600" />
 
-# Hub Financeiro
+# 💰 Hub Financeiro
 
-**Uma solução moderna e modular para gestão financeira pessoal com Django.**
+**Gestão financeira moderna, inteligente e 100% sob seu controle.**
 
-[![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
-[![Django](https://img.shields.io/badge/Django-5.0.1-092E20?style=flat-square&logo=django&logoColor=white)](https://djangoproject.com)
-[![SQLite](https://img.shields.io/badge/SQLite-Local-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://sqlite.org)
-[![Status](https://img.shields.io/badge/Status-Development-orange?style=flat-square)](https://github.com/flavianojr1/hub-financeiro)
-[![Architecture](https://img.shields.io/badge/Architecture-Core--Apps-blueviolet?style=flat-square)](https://github.com/flavianojr1/hub-financeiro)
+[![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Django](https://img.shields.io/badge/Django-5.0.1-092E20?style=for-the-badge&logo=django&logoColor=white)](https://djangoproject.com)
+[![SQLite](https://img.shields.io/badge/SQLite-Local-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org)
+[![Licença](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 ---
 
-[Sobre](#-sobre) • [Funcionalidades](#-funcionalidades) • [Tecnologias](#-tecnologias) • [Estrutura](#-estrutura) • [Começando](#-começando) • [Comandos](#-comandos)
+[Sobre](#-sobre) • [Funcionalidades](#-funcionalidades) • [Interface](#-interface) • [Começando](#-começando) • [Diferenciais](#-diferenciais)
 
 </div>
 
+<br />
+
 ## 📖 Sobre
 
-O **Hub Financeiro** nasceu da necessidade de simplificar o controle de gastos complexos, como faturas de cartão de crédito com múltiplas parcelas. Diferente de uma planilha estática, ele oferece uma plataforma dinâmica que processa extratos CSV, projeta gastos futuros e categoriza suas despesas automaticamente, permitindo que você foque no que realmente importa: **sua saúde financeira.**
+O **Hub Financeiro** é uma plataforma modular desenvolvida em Django para centralizar e automatizar sua vida financeira. Ele vai além das planilhas tradicionais ao processar faturas bancárias reais, projetar compras parceladas nos meses futuros e oferecer insights visuais dinâmicos sobre seus hábitos de consumo.
+
+Ideal para quem busca **privacidade total** (dados 100% locais) e **automação inteligente**.
 
 ---
 
-## ✨ Funcionalidades
+## ✨ Funcionalidades Principais
 
-- 💳 **Gestão de Cartões**: Cadastro e acompanhamento individual de múltiplos cartões.
-- 📂 **Parser de CSV**: Importação simplificada de extratos (NuBank e outros).
-- 🗓️ **Projeção de Parcelas**: Visualize hoje o impacto das compras parceladas nos próximos meses.
-- 🏷️ **Categorização Inteligente**: Regras baseadas em palavras-chave para classificação automática.
-- 📊 **Dashboard de Insights**: Visão geral de gastos por categoria e evolução mensal.
-- 🔒 **Privacidade**: Execução 100% local com SQLite para total controle dos seus dados.
+### 📂 Importação Inteligente
+- **Nubank (CSV)**: Importação nativa direta do extrato do app.
+- **Banco Inter (PDF)**: Leitura automática de faturas em PDF com extração de tabelas e datas de vencimento.
+- **Confirmação de Período**: Modal inteligente que detecta o mês/ano no nome do arquivo e solicita sua confirmação.
+
+### 🔮 Projeção de Futuro
+- **Detecção de Parcelas**: O sistema identifica padrões como `Parcela 01/10` e gera automaticamente previsões para os próximos meses.
+- **Deduplicação Ativa**: Evita dados duplicados ao substituir previsões por gastos reais confirmados em novos uploads.
+
+### 🏷️ Categorização Automática
+- **Motor de Regras**: Crie regras baseadas em palavras-chave (ex: `iFood` ➔ `Alimentação`).
+- **Kit de Boas-Vindas**: Novos usuários já começam com categorias e regras padrão pré-configuradas.
+
+### 📊 Dashboard Dinâmico
+- **KPIs em Tempo Real**: Total gasto, média de transações e contagem mensal.
+- **Gráficos Interativos**: Evolução temporal empilhada por cartão e distribuição por categoria via Chart.js.
+- **Filtros Ágeis**: Slicers de mês e cartão com atualização via AJAX (sem recarregar a página).
 
 ---
 
-## 🛠️ Tecnologias
+## 🎨 Interface Modernizada
 
-O projeto foi construído utilizando as melhores práticas do ecossistema Python:
+A UI foi construída com foco em **UX/UI profissional**, utilizando CSS Vanilla para performance e flexibilidade:
 
-- **Linguagem:** [Python 3.x](https://python.org)
-- **Framework Web:** [Django 5.0.1](https://djangoproject.com)
-- **Banco de Dados:** [SQLite](https://sqlite.org) (Local)
-- **Gráficos:** [Chart.js](https://www.chartjs.org/)
-- **Estilização:** CSS Vanilla & [Font Awesome](https://fontawesome.com/)
-
----
-
-## 🏗️ Estrutura do Projeto
-
-O Hub Financeiro utiliza uma arquitetura modular **Core/Apps**, separando preocupações de infraestrutura da lógica de negócio:
-
-```bash
-hub-financeiro/
-├── core/             # Configurações globais, URLs e WSGI/ASGI
-├── apps/             # Módulos de negócio (apps Django)
-│   ├── invoices/     # Lógica de faturas, upload e dashboard
-│   └── pages/        # Gestão de usuários e páginas institucionais
-├── templates/        # Arquivos HTML globais e componentes
-└── main.py           # Ponto único de entrada do sistema
-```
+- 🌓 **Temas**: Suporte a modo Claro e Escuro.
+- 📱 **Responsivo**: Totalmente adaptado para desktop e dispositivos móveis.
+- ⚡ **Interatividade**: Transições suaves, animações de rotação em ícones e overlays de edição inline.
 
 ---
 
 ## 🚀 Começando
 
-Siga os passos abaixo para rodar o projeto em sua máquina local:
+### Pré-requisitos
+- Python 3.10+
+- Ambiente virtual (venv)
 
-### 1. Clonar o Repositório
-```bash
-git clone https://github.com/flavianojr1/hub-financeiro.git
-cd hub-financeiro
-```
+### Instalação Rápida
 
-### 2. Configurar Ambiente
-```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# Linux/Mac
-source .venv/bin/activate
+1. **Clone e acesse a pasta:**
+   ```bash
+   git clone https://github.com/flavianojr1/hub-financeiro.git
+   cd hub-financeiro
+   ```
 
-pip install -r requirements.txt
-```
+2. **Configure o ambiente:**
+   ```bash
+   python -m venv .venv
+   # Windows: .venv\Scripts\activate | Mac/Linux: source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
 
-### 3. Variáveis de Ambiente
-Crie um arquivo `.env` na raiz:
-```env
-DEBUG=True
-SECRET_KEY=sua_chave_secreta_aqui
-```
-
-### 4. Inicializar e Rodar
-```bash
-python main.py migrate
-python main.py
-```
-Acesse: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+3. **Inicie o banco de dados e o servidor:**
+   ```bash
+   python main.py migrate
+   python main.py
+   ```
+   Acesse: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
 ---
 
-## ⌨️ Comandos Rápidos
+## 💎 Diferenciais Técnicos
 
-O `main.py` substitui o tradicional `manage.py`, centralizando a administração:
-
-| Objetivo | Comando |
-| :--- | :--- |
-| **Rodar Servidor** | `python main.py` |
-| **Aplicar Migrações** | `python main.py migrate` |
-| **Criar Superusuário** | `python main.py createsuperuser` |
-| **Gerar Migrações** | `python main.py makemigrations` |
-| **Console Django** | `python main.py shell` |
+- **Arquitetura Core/Apps**: Separação clara entre configurações globais e lógica de negócio.
+- **Ponto de Entrada Único**: O arquivo `main.py` centraliza todos os comandos administrativos do Django.
+- **Deduplicação de Transações**: Algoritmo que garante integridade dos dados mesmo com múltiplos uploads do mesmo período.
+- **Extratividade Robusta**: Uso de Regex e `pdfplumber` para lidar com layouts complexos de faturas bancárias.
 
 ---
 
 <div align="center">
 
-**[Hub Financeiro](https://github.com/flavianojr1/hub-financeiro)** • Organização e Clareza para o seu bolso.
+Desenvolvido com ❤️ por **[Flaviano Junior](https://www.linkedin.com/in/flaviano-junior)**
 
 </div>

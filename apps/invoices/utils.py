@@ -9,6 +9,52 @@ from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from .models import Invoice, Transaction
 
+def create_transaction_deduplicated(invoice, date, description, amount, is_predicted=False):
+    """
+    Cria uma transação garantindo que não haja duplicidade.
+    1. Se existir uma transação PREVISTA com mesma data, valor e cartão, e estamos criando uma REAL:
+       - Deleta a prevista e cria a real (confirmação do gasto).
+    2. Se já existir uma transação REAL idêntica:
+       - Ignora a nova criação.
+    3. Se já existir uma transação PREVISTA idêntica e estamos criando outra PREVISTA:
+       - Ignora a nova criação.
+    """
+    from .models import Transaction
+    
+    # Critérios de busca para duplicidade
+    # Nota: Usamos o cartão da invoice para o filtro
+    duplicate_qs = Transaction.objects.filter(
+        invoice__user=invoice.user,
+        invoice__credit_card=invoice.credit_card,
+        date=date,
+        amount=amount
+    )
+
+    # 1. Verificar se existe transação REAL idêntica
+    if duplicate_qs.filter(is_predicted=False).exists():
+        return None # Já existe o gasto real, não faz nada
+
+    # 2. Se estamos tentando criar uma REAL, mas existe uma PREVISTA
+    if not is_predicted:
+        predicted_match = duplicate_qs.filter(is_predicted=True)
+        if predicted_match.exists():
+            predicted_match.delete() # Remove a previsão para dar lugar ao real
+
+    # 3. Se estamos tentando criar uma PREVISTA, mas já existe uma PREVISTA
+    else:
+        if duplicate_qs.filter(is_predicted=True).exists():
+            return None # Já está previsto, não duplica
+
+    # Criar a transação finalmente
+    return Transaction.objects.create(
+        invoice=invoice,
+        date=date,
+        description=description,
+        amount=amount,
+        is_predicted=is_predicted
+    )
+
+
 def process_inter_pdf(pdf_file, invoice):
     """
     Processa um arquivo PDF do Banco Inter e cria transações.
@@ -79,15 +125,15 @@ def process_inter_pdf(pdf_file, invoice):
                         clean_value = value_str.replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
                         amount_val = Decimal(clean_value)
 
-                        # Criar transação principal
-                        t = Transaction.objects.create(
+                        # Criar transação principal deduplicada
+                        t = create_transaction_deduplicated(
                             invoice=invoice,
                             date=date_val,
                             description=description.strip(),
                             amount=abs(amount_val),
                             is_predicted=False
                         )
-                        transactions_created += 1
+                        if t: transactions_created += 1
 
                         # Lógica de Parcelamento (Ex: Parcela 03 de 10)
                         installment_match = re.search(r'Parcela (\d{2}) de (\d{2})', description)
@@ -104,14 +150,14 @@ def process_inter_pdf(pdf_file, invoice):
                                         f'Parcela {current_installment + i:02d} de {total_installments:02d}'
                                     ).strip()
 
-                                    Transaction.objects.create(
+                                    tp = create_transaction_deduplicated(
                                         invoice=invoice,
                                         date=next_date,
                                         description=next_desc,
                                         amount=abs(amount_val),
                                         is_predicted=True
                                     )
-                                    predictions_created += 1
+                                    if tp: predictions_created += 1
 
                     except Exception:
                         continue
@@ -198,15 +244,15 @@ def process_nubank_csv(csv_file, invoice):
                 if 'pagamento recebido' in description.lower():
                     continue
 
-                # Criar a transação REAL (atual)
-                Transaction.objects.create(
+                # Criar a transação REAL (atual) deduplicada
+                t = create_transaction_deduplicated(
                     invoice=invoice,
                     date=date_val,
                     description=description,
-                    amount=abs(amount_val),  # Usar valor absoluto
+                    amount=abs(amount_val),
                     is_predicted=False
                 )
-                transactions_created += 1
+                if t: transactions_created += 1
                 dates_found.append(date_val)
 
                 # Verificar parcelamento e criar previsões
@@ -237,16 +283,15 @@ def process_nubank_csv(csv_file, invoice):
                                 f'{next_installment}/{total_installments}'
                             )
 
-                            # Evitar duplicatas em previsões já existentes?
-                            # Por enquanto vamos criar vinculado a esta invoice
-                            Transaction.objects.create(
-                                invoice=invoice, # Vincula à fatura original para saber a origem
+                            # Criar a transação PREVISTA deduplicada
+                            tp = create_transaction_deduplicated(
+                                invoice=invoice,
                                 date=next_date,
                                 description=new_desc,
                                 amount=abs(amount_val),
                                 is_predicted=True
                             )
-                            predictions_created += 1
+                            if tp: predictions_created += 1
 
         except Exception as e:
             # Ignorar linhas com erro
