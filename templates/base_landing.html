@@ -18,6 +18,27 @@
     
     <style>
         :root {
+            --bg-deep: #f3f4f6;
+            --bg-card: rgba(255, 255, 255, 0.7);
+            --border-glass: rgba(0, 0, 0, 0.1);
+            --hub-purple: #8A05BE;
+            --hub-cyan: #00b4d8;
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --text-grad-start: #111827;
+            --text-grad-end: #6b7280;
+            --header-scrolled: rgba(255, 255, 255, 0.85);
+            --bg-glow-center: rgba(138, 5, 190, 0.1);
+            --bg-glow-edge: rgba(243, 244, 246, 0);
+            --bg-comparison: #ffffff;
+            --text-highlight: #111827;
+            --shadow-glass: rgba(0, 0, 0, 0.1);
+            --cta-gradient: linear-gradient(135deg, rgba(138, 5, 190, 0.1) 0%, rgba(255, 255, 255, 0.8) 100%);
+            --chart-grid: rgba(0, 0, 0, 0.05);
+            --chart-tick: #6b7280;
+        }
+
+        :root[data-theme="dark"] {
             --bg-deep: #030712;
             --bg-card: rgba(17, 24, 39, 0.7);
             --border-glass: rgba(255, 255, 255, 0.1);
@@ -25,6 +46,17 @@
             --hub-cyan: #00f2fe;
             --text-primary: #f9fafb;
             --text-secondary: #9ca3af;
+            --text-grad-start: #fff;
+            --text-grad-end: #9ca3af;
+            --header-scrolled: rgba(3, 7, 18, 0.85);
+            --bg-glow-center: rgba(138, 5, 190, 0.15);
+            --bg-glow-edge: rgba(3, 7, 18, 0);
+            --bg-comparison: #050a18;
+            --text-highlight: #fff;
+            --shadow-glass: rgba(0, 0, 0, 0.5);
+            --cta-gradient: linear-gradient(135deg, rgba(138, 5, 190, 0.1) 0%, rgba(3, 7, 18, 0.8) 100%);
+            --chart-grid: rgba(255, 255, 255, 0.05);
+            --chart-tick: #9ca3af;
         }
 
         * {
@@ -38,6 +70,7 @@
             background-color: var(--bg-deep);
             color: var(--text-primary);
             overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .glass-card {
@@ -49,19 +82,28 @@
         }
 
         .text-gradient {
-            background: linear-gradient(135deg, #fff 0%, #9ca3af 100%);
+            background: linear-gradient(135deg, var(--text-grad-start) 0%, var(--text-grad-end) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
         .purple-gradient {
-            background: linear-gradient(135deg, #8A05BE 0%, #c026d3 100%);
+            background: linear-gradient(135deg, var(--hub-purple) 0%, #c026d3 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+
+        :root[data-theme="dark"] .logo-light { display: none; }
+        :root:not([data-theme="dark"]) .logo-dark { display: none; }
     </style>
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
     {% block extra_css %}{% endblock %}
 </head>
 
