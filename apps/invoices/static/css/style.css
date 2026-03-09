@@ -1013,6 +1013,19 @@ body.sidebar-collapsed .sidebar-toggle-container {
     border-color: var(--accent-purple);
 }
 
+.btn-danger {
+    background: rgba(245, 87, 108, 0.1);
+    color: var(--accent-pink);
+    border: 1px solid var(--accent-pink);
+    box-shadow: none;
+}
+
+.btn-danger:hover {
+    background: rgba(245, 87, 108, 0.15);
+    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.2);
+    transform: translateY(-2px);
+}
+
 .btn-danger-ghost {
     background: transparent;
     color: var(--accent-pink);

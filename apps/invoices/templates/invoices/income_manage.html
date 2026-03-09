@@ -38,6 +38,55 @@
         cursor: pointer;
         accent-color: var(--accent-purple);
     }
+
+    /* Modal Customizado */
+    .custom-modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    .custom-modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+    .custom-modal-box {
+        background: var(--bg-card);
+        padding: 2rem;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: var(--shadow-lg);
+        transform: translateY(20px);
+        transition: transform 0.3s ease;
+        text-align: center;
+    }
+    .custom-modal-overlay.active .custom-modal-box {
+        transform: translateY(0);
+    }
+    .custom-modal-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    .custom-modal-desc {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+    }
+    .custom-modal-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
 </style>
 {% endblock %}
 
@@ -163,7 +212,7 @@
         <!-- Container esquerdo: formulário -->
         <div class="incomes-panel">
             <div class="card fade-in-up" style="animation-delay: 0.1s;">
-                <h2 class="card-title">💰 Nova Entrada</h2>
+                <h2 class="card-title"><i class="fi fi-br-plus" style="color: var(--accent-success);"></i> Nova Entrada</h2>
 
                 <form method="post" class="incomes-form">
                     {% csrf_token %}
@@ -218,7 +267,7 @@
         <!-- Container direito: lista de entradas -->
         <div class="incomes-panel">
             <div class="card fade-in-up" style="animation-delay: 0.2s;">
-                <h2 class="card-title">💵 Minhas Entradas</h2>
+                <h2 class="card-title"><i class="fi fi-br-list" style="color: var(--accent-purple);"></i> Minhas Entradas</h2>
 
                 {% if incomes %}
                 <div class="items-list">
@@ -241,11 +290,13 @@
                         </div>
                         <div class="incomes-item-actions">
                             <form method="post" class="inline-form"
-                                onsubmit="return confirm('Tem certeza que deseja excluir esta entrada?');"
+                                onsubmit="return handleIncomeDelete(event, this, {{ inc.is_recurring|lower }});"
                                 style="margin: 0;">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="delete_income">
                                 <input type="hidden" name="income_id" value="{{ inc.pk }}">
+                                <!-- Flag injected via JS -->
+                                <input type="hidden" name="delete_all" class="delete-all-flag" value="false">
                                 <button type="submit" class="btn btn-danger-ghost btn-sm" title="Deletar">Excluir</button>
                             </form>
                         </div>
@@ -261,6 +312,19 @@
                 </div>
                 {% endif %}
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Customizado de Exclusão -->
+<div class="custom-modal-overlay" id="deleteRecurringModal">
+    <div class="custom-modal-box">
+        <h3 class="custom-modal-title">Excluir Entrada Recorrente</h3>
+        <p class="custom-modal-desc">Como você deseja excluir esta entrada?</p>
+        <div class="custom-modal-actions">
+            <button type="button" class="btn btn-danger" onclick="confirmDeleteRecurring('all')" style="width: 100%;">Excluir Recorrências (Esta e Futuras)</button>
+            <button type="button" class="btn btn-danger" onclick="confirmDeleteRecurring('single')" style="width: 100%;">Excluir apenas esta</button>
+            <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()" style="width: 100%;">Cancelar</button>
         </div>
     </div>
 </div>
@@ -335,19 +399,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
             }
         });
-
-        // Evento de submit do form para converter de volta para decimal padrão (ex: 1.000,50 -> 1000.50)
-        const form = amountInput.closest('form');
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                if (amountInput.value) {
-                    // Remove os pontos e troca a vírgula por ponto para o backend do Django
-                    let backendValue = amountInput.value.replace(/\./g, '').replace(',', '.');
-                    amountInput.value = backendValue;
-                }
-            });
-        }
     }
 });
+
+// Variável global para armazenar o formulário que está sendo excluído
+let formToSubmit = null;
+
+// Fora do DOMContentLoaded para estar disponível no HTML inline
+function handleIncomeDelete(event, form, isRecurring) {
+    if (isRecurring) {
+        event.preventDefault();
+        formToSubmit = form;
+        document.getElementById('deleteRecurringModal').classList.add('active');
+    } else {
+        if(!confirm('Tem certeza que deseja excluir esta entrada?')) {
+            event.preventDefault();
+        }
+    }
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteRecurringModal').classList.remove('active');
+    formToSubmit = null;
+}
+
+function confirmDeleteRecurring(type) {
+    if (formToSubmit) {
+        if (type === 'all') {
+            formToSubmit.querySelector('.delete-all-flag').value = 'true';
+        } else {
+            formToSubmit.querySelector('.delete-all-flag').value = 'false';
+        }
+        formToSubmit.submit();
+    }
+    closeDeleteModal();
+}
 </script>
 {% endblock %}

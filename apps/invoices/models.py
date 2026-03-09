@@ -123,6 +123,7 @@ class Income(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateField()
     is_recurring = models.BooleanField(default=False, help_text='Indica se foi criado como uma entrada recorrente')
+    recurring_group_id = models.CharField(max_length=50, null=True, blank=True, help_text='Agrupa entradas recorrentes para exclusão em lote')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

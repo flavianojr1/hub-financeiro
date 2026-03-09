@@ -620,6 +620,9 @@ def income_manage(request):
                 income.user = request.user
                 
                 if income.is_recurring:
+                    import uuid
+                    group_id = uuid.uuid4().hex
+                    
                     # Gera a entrada atual + 11 meses para frente
                     from dateutil.relativedelta import relativedelta
                     for i in range(12):
@@ -628,7 +631,8 @@ def income_manage(request):
                             description=income.description,
                             amount=income.amount,
                             date=income.date + relativedelta(months=i),
-                            is_recurring=True
+                            is_recurring=True,
+                            recurring_group_id=group_id
                         )
                     messages.success(request, '✅ Entrada recorrente criada para os próximos 12 meses!')
                 else:
@@ -639,9 +643,22 @@ def income_manage(request):
 
         elif action == 'delete_income':
             income_id = request.POST.get('income_id')
+            delete_all = request.POST.get('delete_all') == 'true'
+            
             income = get_object_or_404(Income, pk=income_id, user=request.user)
-            income.delete()
-            messages.success(request, '🗑️ Entrada deletada.')
+            
+            if delete_all and income.recurring_group_id:
+                # Deletar a atual e todas as FUTURAS do mesmo grupo
+                count, _ = Income.objects.filter(
+                    user=request.user,
+                    recurring_group_id=income.recurring_group_id,
+                    date__gte=income.date
+                ).delete()
+                messages.success(request, f'🗑️ {count} entradas recorrentes deletadas.')
+            else:
+                income.delete()
+                messages.success(request, '🗑️ Entrada deletada.')
+                
             return redirect('income_manage')
 
     context = {

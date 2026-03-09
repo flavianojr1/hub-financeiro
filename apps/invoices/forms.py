@@ -138,6 +138,16 @@ class CreditCardForm(forms.ModelForm):
 
 
 class IncomeForm(forms.ModelForm):
+    # Sobrescreve o campo amount para CharField temporariamente no form
+    # para evitar que o Django rejeite "15,00" antes de passar pelo clean_amount
+    amount = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': '0,00',
+            'id': 'id_amount'
+        })
+    )
+
     class Meta:
         model = Income
         fields = ['description', 'amount', 'date', 'is_recurring']
@@ -145,11 +155,6 @@ class IncomeForm(forms.ModelForm):
             'description': forms.TextInput(attrs={
                 'class': 'form-input',
                 'placeholder': 'Ex: Salário, Bônus...',
-            }),
-            'amount': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': '0,00',
-                'id': 'id_amount'
             }),
             'date': forms.TextInput(attrs={
                 'class': 'form-input flatpickr-date',
@@ -162,8 +167,10 @@ class IncomeForm(forms.ModelForm):
 
     def clean_amount(self):
         amount_str = str(self.cleaned_data.get('amount', ''))
-        # Remove pontos e troca vírgula por ponto
-        amount_str = amount_str.replace('.', '').replace(',', '.')
+        # Remove pontos (milhar)
+        amount_str = amount_str.replace('.', '')
+        # Troca a vírgula (decimal) por ponto
+        amount_str = amount_str.replace(',', '.')
         try:
             val = Decimal(amount_str)
             return val
