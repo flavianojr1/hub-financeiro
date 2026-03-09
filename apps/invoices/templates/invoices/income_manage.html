@@ -1,0 +1,353 @@
+{% extends 'invoices/base.html' %}
+{% load static %}
+
+{% block title %}Entradas - Hub Financeiro{% endblock %}
+{% block topbar_title %}Receitas e Entradas{% endblock %}
+
+{% block extra_css %}
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/airbnb.css">
+<style>
+    /* Custom Flatpickr tweaks to match Vision theme */
+    .flatpickr-calendar {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-lg);
+        font-family: 'Inter', sans-serif;
+    }
+    .flatpickr-day {
+        color: var(--text-primary);
+    }
+    .flatpickr-day.selected {
+        background: var(--accent-purple);
+        border-color: var(--accent-purple);
+    }
+    .flatpickr-months .flatpickr-month {
+        color: var(--text-primary);
+        fill: var(--text-primary);
+    }
+    .flatpickr-current-month .flatpickr-monthDropdown-months {
+        background: var(--bg-card);
+    }
+    
+    /* Ampliando o checkbox */
+    .form-checkbox-large {
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        accent-color: var(--accent-purple);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<style>
+    .incomes-page-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .incomes-panel {
+        height: 100%;
+    }
+
+    .incomes-form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-bottom: 2rem;
+    }
+
+    .incomes-form-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 1rem;
+    }
+
+    .incomes-form-label {
+        width: 160px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .incomes-form-field {
+        flex: 1;
+        max-width: 400px;
+        position: relative;
+    }
+
+    .incomes-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 10px;
+    }
+
+    .incomes-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .incomes-item-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .incomes-item-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    .incomes-item-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .incomes-item-desc {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+    }
+
+    .incomes-item-amount {
+        font-weight: 700;
+        color: #10b981;
+    }
+
+    .incomes-item-date {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    @media (max-width: 1024px) {
+        .incomes-page-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .incomes-form-row {
+            flex-direction: column;
+            align-items: stretch;
+            margin-bottom: 0.8rem;
+        }
+
+        .incomes-form-label {
+            width: 100%;
+        }
+
+        .incomes-form-field {
+            max-width: 100%;
+        }
+    }
+</style>
+
+<div>
+    <div class="incomes-page-layout">
+        <!-- Container esquerdo: formulário -->
+        <div class="incomes-panel">
+            <div class="card fade-in-up" style="animation-delay: 0.1s;">
+                <h2 class="card-title">💰 Nova Entrada</h2>
+
+                <form method="post" class="incomes-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_income">
+
+                    <div class="incomes-form-row">
+                        <label for="{{ form.description.id_for_label }}" class="incomes-form-label">Descrição:</label>
+                        <div class="incomes-form-field">
+                            {{ form.description }}
+                        </div>
+                    </div>
+
+                    <div class="incomes-form-row">
+                        <label for="{{ form.amount.id_for_label }}" class="incomes-form-label">Valor (R$):</label>
+                        <div class="incomes-form-field">
+                            <input type="text" name="amount" class="form-input" id="id_amount" placeholder="0,00" required>
+                        </div>
+                    </div>
+
+                    <div class="incomes-form-row">
+                        <label for="{{ form.date.id_for_label }}" class="incomes-form-label">Data:</label>
+                        <div class="incomes-form-field">
+                            {{ form.date }}
+                        </div>
+                    </div>
+
+                    <div class="incomes-form-row">
+                        <label for="{{ form.is_recurring.id_for_label }}" class="incomes-form-label">Recorrente?</label>
+                        <div class="incomes-form-field" style="display: flex; align-items: center; gap: 10px;">
+                            {{ form.is_recurring }}
+                            <small class="text-secondary">Gerar para os próximos 12 meses</small>
+                        </div>
+                    </div>
+
+                    <div class="incomes-actions">
+                        <button type="submit" class="btn btn-primary" style="padding: 10px 30px;">Salvar Entrada</button>
+                    </div>
+
+                    {% if form.errors %}
+                    <div class="form-errors" style="width: 100%;">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <p class="form-error" style="color: var(--danger-color);">{{ error }}</p>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+
+        <!-- Container direito: lista de entradas -->
+        <div class="incomes-panel">
+            <div class="card fade-in-up" style="animation-delay: 0.2s;">
+                <h2 class="card-title">💵 Minhas Entradas</h2>
+
+                {% if incomes %}
+                <div class="items-list">
+                    {% for inc in incomes %}
+                    <div class="incomes-item">
+                        <div class="incomes-item-info">
+                            <div class="incomes-item-icon">
+                                <i class="fi fi-br-wallet"></i>
+                            </div>
+                            <div class="incomes-item-details">
+                                <span class="incomes-item-desc">{{ inc.description }}</span>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <span class="incomes-item-amount">R$ {{ inc.amount }}</span>
+                                    <span class="incomes-item-date">• {{ inc.date|date:"d/m/Y" }}</span>
+                                    {% if inc.is_recurring %}
+                                        <span class="badge badge-purple" style="font-size: 0.7rem; padding: 2px 6px;">Recorrente</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="incomes-item-actions">
+                            <form method="post" class="inline-form"
+                                onsubmit="return confirm('Tem certeza que deseja excluir esta entrada?');"
+                                style="margin: 0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_income">
+                                <input type="hidden" name="income_id" value="{{ inc.pk }}">
+                                <button type="submit" class="btn btn-danger-ghost btn-sm" title="Deletar">Excluir</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state"
+                    style="text-align: center; padding: 3rem; background: var(--bg-secondary); border-radius: 8px;">
+                    <div class="empty-icon" style="font-size: 3rem; margin-bottom: 1rem;">💼</div>
+                    <h3>Nenhuma entrada cadastrada</h3>
+                    <p class="text-secondary">Cadastre seus salários ou bônus no formulário ao lado.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar Flatpickr no campo de data
+    const dateInputs = document.querySelectorAll('.flatpickr-date');
+    if (dateInputs.length > 0) {
+        flatpickr(dateInputs, {
+            locale: "pt",
+            dateFormat: "Y-m-d",
+            altInput: true,
+            altFormat: "d/m/Y",
+            allowInput: true,
+            defaultDate: "today"
+        });
+    }
+
+    const amountInput = document.getElementById('id_amount');
+    
+    if (amountInput) {
+        // Função que formata o valor em R$ (Nubank style)
+        function formatCurrency(value) {
+            // Remove tudo que não for dígito
+            let numericValue = value.replace(/\D/g, '');
+            
+            // Se estiver vazio, retorna 0,00
+            if (numericValue.length === 0) {
+                return '';
+            }
+            
+            // Garante no mínimo 3 dígitos completando com zeros à esquerda se precisar
+            numericValue = numericValue.padStart(3, '0');
+            
+            // Extrai a parte inteira (tudo menos os 2 últimos dígitos) e os centavos (2 últimos)
+            let inteiros = numericValue.slice(0, -2);
+            let centavos = numericValue.slice(-2);
+            
+            // Remove zeros à esquerda indesejados da parte inteira (ex: 003 -> 3)
+            inteiros = parseInt(inteiros, 10).toString();
+            
+            // Adiciona pontos de milhar
+            inteiros = inteiros.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            
+            return inteiros + ',' + centavos;
+        }
+
+        // Evento de input (enquanto digita)
+        amountInput.addEventListener('input', function(e) {
+            // Guarda a posição do cursor
+            let cursorPosition = this.selectionStart;
+            let lengthBefore = this.value.length;
+            
+            // Formata
+            let formatted = formatCurrency(this.value);
+            this.value = formatted;
+            
+            // Ajusta o cursor para o final (comportamento natural de digitação da direita pra esquerda)
+            this.setSelectionRange(this.value.length, this.value.length);
+        });
+
+        // Impede a digitação de caracteres não numéricos
+        amountInput.addEventListener('keypress', function(e) {
+            if (!/\d/.test(e.key) && e.key !== 'Enter') {
+                e.preventDefault();
+            }
+        });
+
+        // Evento de submit do form para converter de volta para decimal padrão (ex: 1.000,50 -> 1000.50)
+        const form = amountInput.closest('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                if (amountInput.value) {
+                    // Remove os pontos e troca a vírgula por ponto para o backend do Django
+                    let backendValue = amountInput.value.replace(/\./g, '').replace(',', '.');
+                    amountInput.value = backendValue;
+                }
+            });
+        }
+    }
+});
+</script>
+{% endblock %}

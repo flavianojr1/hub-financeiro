@@ -114,3 +114,19 @@ class Transaction(models.Model):
                 return rule.category.name
 
         return 'Outros'
+
+
+class Income(models.Model):
+    """Representa uma entrada/receita manual (salário, bônus, etc)"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='incomes')
+    description = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateField()
+    is_recurring = models.BooleanField(default=False, help_text='Indica se foi criado como uma entrada recorrente')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        return f"{self.date} - {self.description}: R$ {self.amount}"

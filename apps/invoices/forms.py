@@ -1,5 +1,6 @@
 from django import forms
-from .models import Category, CategoryRule, CreditCard
+from decimal import Decimal, InvalidOperation
+from .models import Category, CategoryRule, CreditCard, Income
 
 
 class CSVUploadForm(forms.Form):
@@ -134,3 +135,37 @@ class CreditCardForm(forms.ModelForm):
                 'type': 'color',
             }),
         }
+
+
+class IncomeForm(forms.ModelForm):
+    class Meta:
+        model = Income
+        fields = ['description', 'amount', 'date', 'is_recurring']
+        widgets = {
+            'description': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Ex: Salário, Bônus...',
+            }),
+            'amount': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': '0,00',
+                'id': 'id_amount'
+            }),
+            'date': forms.TextInput(attrs={
+                'class': 'form-input flatpickr-date',
+                'placeholder': 'dd/mm/aaaa',
+            }),
+            'is_recurring': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox-large',
+            }),
+        }
+
+    def clean_amount(self):
+        amount_str = str(self.cleaned_data.get('amount', ''))
+        # Remove pontos e troca vírgula por ponto
+        amount_str = amount_str.replace('.', '').replace(',', '.')
+        try:
+            val = Decimal(amount_str)
+            return val
+        except InvalidOperation:
+            raise forms.ValidationError("Valor inválido.")

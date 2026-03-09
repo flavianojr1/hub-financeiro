@@ -62,12 +62,12 @@
 <div class="stats-grid" style="margin-bottom: 1rem;">
     <div class="stat-card transactions" style="padding: var(--spacing-md);">
         <div class="stat-header">
-            <div class="stat-icon-wrapper" style="width: 40px; height: 40px;">
-                <i class="fi fi-br-credit-card" style="font-size: 1.2rem;"></i>
+            <div class="stat-icon-wrapper" style="width: 40px; height: 40px; background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                <i class="fi fi-br-wallet" style="font-size: 1.2rem;"></i>
             </div>
             <div class="stat-content">
-                <div class="stat-label" style="font-size: 0.7rem;">Transações (Mês)</div>
-                <div class="stat-value" id="kpi-total-transactions" style="font-size: 1.4rem;">{{ stats_current_month.total_transactions }}</div>
+                <div class="stat-label" style="font-size: 0.7rem;">Entradas (Mês)</div>
+                <div class="stat-value" id="kpi-total-income" style="font-size: 1.4rem;">R$ {{ total_income|floatformat:2 }}</div>
             </div>
         </div>
     </div>
@@ -77,19 +77,19 @@
                 <i class="fi fi-br-coins" style="font-size: 1.2rem;"></i>
             </div>
             <div class="stat-content">
-                <div class="stat-label" style="font-size: 0.7rem;">Total Gasto (Mês)</div>
+                <div class="stat-label" style="font-size: 0.7rem;">Faturas (Mês)</div>
                 <div class="stat-value" id="kpi-total-amount" style="font-size: 1.4rem;">R$ {{ stats_current_month.total_amount|floatformat:2 }}</div>
             </div>
         </div>
     </div>
     <div class="stat-card invoices" style="padding: var(--spacing-md);">
         <div class="stat-header">
-            <div class="stat-icon-wrapper" style="width: 40px; height: 40px;">
-                <i class="fi fi-br-file" style="font-size: 1.2rem;"></i>
+            <div class="stat-icon-wrapper" style="width: 40px; height: 40px; background: rgba(138, 5, 190, 0.15); color: #8A05BE;">
+                <i class="fi fi-br-scale" style="font-size: 1.2rem;"></i>
             </div>
             <div class="stat-content">
-                <div class="stat-label" style="font-size: 0.7rem;">Faturas</div>
-                <div class="stat-value" style="font-size: 1.4rem;">{{ stats.total_invoices }}</div>
+                <div class="stat-label" style="font-size: 0.7rem;">Balanço</div>
+                <div class="stat-value" id="kpi-balance" style="font-size: 1.4rem;">R$ {{ balance|floatformat:2 }}</div>
             </div>
         </div>
     </div>
@@ -135,7 +135,7 @@
     </button>
 </div>
 
-{% if stats.total_transactions > 0 %}
+{% if has_any_data %}
 
 {% if filtered %}
 <!-- Modo filtrado: gráfico de categorias + lista de transações -->
@@ -257,19 +257,22 @@
             const data = await response.json();
 
             // Obter elementos
-            const transEl = document.getElementById('kpi-total-transactions');
+            const incomeEl = document.getElementById('kpi-total-income');
             const amountEl = document.getElementById('kpi-total-amount');
+            const balanceEl = document.getElementById('kpi-balance');
             const avgEl = document.getElementById('kpi-avg-amount');
 
             // Extrair valores atuais dos elementos
-            const currentTrans = parseInt(transEl.textContent) || 0;
-            const currentAmount = parseFloat(amountEl.textContent.replace(/R\$ /g, '').replace(',', '.')) || 0;
-            const currentAvg = parseFloat(avgEl.textContent.replace(/R\$ /g, '').replace(',', '.')) || 0;
+            const currentIncome = incomeEl ? parseFloat(incomeEl.textContent.replace(/R\$ /g, '').replace(',', '.')) || 0 : 0;
+            const currentAmount = amountEl ? parseFloat(amountEl.textContent.replace(/R\$ /g, '').replace(',', '.')) || 0 : 0;
+            const currentBalance = balanceEl ? parseFloat(balanceEl.textContent.replace(/R\$ /g, '').replace(',', '.')) || 0 : 0;
+            const currentAvg = avgEl ? parseFloat(avgEl.textContent.replace(/R\$ /g, '').replace(',', '.')) || 0 : 0;
 
             // Animar valores
-            animateValue(transEl, currentTrans, data.total_transactions, 800, '', '');
-            animateValue(amountEl, currentAmount, data.total_amount, 1000, 'R$ ', ',00');
-            animateValue(avgEl, currentAvg, data.avg_amount, 900, 'R$ ', ',00');
+            if (incomeEl) animateValue(incomeEl, currentIncome, data.total_income || 0, 800, 'R$ ', ',00');
+            if (amountEl) animateValue(amountEl, currentAmount, data.total_amount, 1000, 'R$ ', ',00');
+            if (balanceEl) animateValue(balanceEl, currentBalance, data.balance || 0, 900, 'R$ ', ',00');
+            if (avgEl) animateValue(avgEl, currentAvg, data.avg_amount, 900, 'R$ ', ',00');
         } catch (error) {
             console.error('Erro ao buscar dados de KPIs:', error);
         }
@@ -471,7 +474,7 @@
 {% endblock %}
 
 {% block extra_js %}
-{% if stats.total_transactions > 0 %}
+{% if has_any_data %}
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script

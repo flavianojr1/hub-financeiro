@@ -49,6 +49,12 @@
                 <span class="sidebar-icon"><i class="fi fi-br-file-upload"></i></span>
                 <span class="sidebar-label">Nova Fatura</span>
             </a>
+            <a href="{% url 'income_manage' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'income_manage' %}active{% endif %}"
+                id="nav-incomes">
+                <span class="sidebar-icon"><i class="fi fi-br-wallet"></i></span>
+                <span class="sidebar-label">Entradas</span>
+            </a>
             <a href="{% url 'invoice_list' %}"
                 class="sidebar-link {% if request.resolver_match.url_name == 'invoice_list' %}active{% endif %}"
                 id="nav-invoices">

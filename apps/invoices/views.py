@@ -5,8 +5,8 @@ from django.http import JsonResponse
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
 from django.db import IntegrityError
-from .models import Invoice, Transaction, Category, CategoryRule, CreditCard
-from .forms import CSVUploadForm, CategoryForm, CategoryRuleForm, CreditCardForm
+from .models import Invoice, Transaction, Category, CategoryRule, CreditCard, Income
+from .forms import CSVUploadForm, CategoryForm, CategoryRuleForm, CreditCardForm, IncomeForm
 from .utils import (
     process_nubank_csv, 
     process_inter_pdf, 
@@ -130,9 +130,32 @@ def dashboard(request):
         'total_amount': current_month_amount,
     }
 
+    # Incomes (Entradas)
+    all_incomes = Income.objects.filter(user=request.user)
+    if selected_month:
+        try:
+            parts = selected_month.split('-')
+            filter_year = int(parts[0])
+            filter_month = int(parts[1])
+            month_incomes = all_incomes.filter(date__year=filter_year, date__month=filter_month)
+        except:
+            month_incomes = all_incomes.filter(date__year=today.year, date__month=today.month)
+    else:
+        month_incomes = all_incomes.filter(date__year=today.year, date__month=today.month)
+        
+    total_income = month_incomes.aggregate(Sum('amount'))['amount__sum'] or 0
+    # Se filtrado, usa total_amount do filtro. Se não, usa do mês atual para o balanço.
+    current_or_filtered_amount = total_amount if filtered else current_month_amount
+    balance = total_income - current_or_filtered_amount
+
+    has_any_data = all_transactions.exists() or all_incomes.exists()
+
     context = {
         'stats': stats,
         'stats_current_month': stats_current_month,
+        'total_income': total_income,
+        'balance': balance,
+        'has_any_data': has_any_data,
         'monthly_list': monthly_list,
         'all_months': all_months,
         'filtered': filtered,
@@ -471,10 +494,21 @@ def get_stats_data(request):
     total_amount = all_transactions.aggregate(Sum('amount'))['amount__sum'] or 0
     total_transactions = all_transactions.count()
     
+    # Incomes
+    month_incomes = Income.objects.filter(
+        user=request.user, 
+        date__year=target_year, 
+        date__month=target_month
+    )
+    total_income = month_incomes.aggregate(Sum('amount'))['amount__sum'] or 0
+    balance = total_income - target_month_amount
+
     result = {
         'total_transactions': target_month_count,
         'total_amount': float(target_month_amount),
         'avg_amount': float(total_amount / total_transactions) if total_transactions > 0 else 0,
+        'total_income': float(total_income),
+        'balance': float(balance),
     }
     
     return JsonResponse(result)
@@ -568,3 +602,51 @@ def card_manage(request):
     }
 
     return render(request, 'invoices/card_manage.html', context)
+
+
+@login_required
+def income_manage(request):
+    """View para gerenciar entradas manuais (receitas)"""
+    incomes = Income.objects.filter(user=request.user)
+    form = IncomeForm()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'add_income':
+            form = IncomeForm(request.POST)
+            if form.is_valid():
+                income = form.save(commit=False)
+                income.user = request.user
+                
+                if income.is_recurring:
+                    # Gera a entrada atual + 11 meses para frente
+                    from dateutil.relativedelta import relativedelta
+                    for i in range(12):
+                        Income.objects.create(
+                            user=request.user,
+                            description=income.description,
+                            amount=income.amount,
+                            date=income.date + relativedelta(months=i),
+                            is_recurring=True
+                        )
+                    messages.success(request, '✅ Entrada recorrente criada para os próximos 12 meses!')
+                else:
+                    income.save()
+                    messages.success(request, '✅ Entrada adicionada com sucesso!')
+                
+                return redirect('income_manage')
+
+        elif action == 'delete_income':
+            income_id = request.POST.get('income_id')
+            income = get_object_or_404(Income, pk=income_id, user=request.user)
+            income.delete()
+            messages.success(request, '🗑️ Entrada deletada.')
+            return redirect('income_manage')
+
+    context = {
+        'incomes': incomes,
+        'form': form,
+    }
+
+    return render(request, 'invoices/income_manage.html', context)
