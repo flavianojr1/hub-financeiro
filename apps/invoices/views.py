@@ -117,11 +117,16 @@ def dashboard(request):
     current_month_amount = current_month_transactions.aggregate(Sum('amount'))['amount__sum'] or 0
     current_month_count = current_month_transactions.count()
     
+    # Soma das parcelas do mês atual
+    current_installments_sum = current_month_transactions.filter(
+        description__icontains='Parcela'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+    
     stats = {
         'total_transactions': total_transactions,
         'total_amount': total_amount,
         'total_invoices': Invoice.objects.filter(user=request.user).count(),
-        'avg_amount': total_amount / total_transactions if total_transactions > 0 else 0,
+        'avg_amount': current_installments_sum,
     }
     
     # KPIs do mês atual (mostrados independentemente do filtro)
@@ -490,6 +495,11 @@ def get_stats_data(request):
     target_month_amount = target_month_transactions.aggregate(Sum('amount'))['amount__sum'] or 0
     target_month_count = target_month_transactions.count()
     
+    # Soma das parcelas do mês
+    installments_sum = target_month_transactions.filter(
+        description__icontains='Parcela'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+    
     # KPIs globais (para média)
     total_amount = all_transactions.aggregate(Sum('amount'))['amount__sum'] or 0
     total_transactions = all_transactions.count()
@@ -506,7 +516,7 @@ def get_stats_data(request):
     result = {
         'total_transactions': target_month_count,
         'total_amount': float(target_month_amount),
-        'avg_amount': float(total_amount / total_transactions) if total_transactions > 0 else 0,
+        'avg_amount': float(installments_sum),
         'total_income': float(total_income),
         'balance': float(balance),
     }
