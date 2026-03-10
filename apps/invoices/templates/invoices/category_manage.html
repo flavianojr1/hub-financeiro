@@ -213,7 +213,7 @@
                     </div>
                     <div style="flex: 2; padding-right: 15px;">
                         <input type="text" name="keyword" class="form-input" placeholder="Ex: Ifood" required
-                            style="width: 100%;">
+                            value="{{ t.description|truncatechars:40 }}" style="width: 100%;">
                     </div>
                     <div style="flex: 2; padding-right: 15px;">
                         <select name="category_id" class="form-input" required style="width: 100%;">
