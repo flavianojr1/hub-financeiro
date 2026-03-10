@@ -322,7 +322,7 @@ def invoice_update(request, pk):
 @login_required
 def category_manage(request):
     """View para gerenciar categorias e regras"""
-    categories = Category.objects.filter(user=request.user).prefetch_related('rules')
+    categories = Category.objects.filter(user=request.user, type='expense').prefetch_related('rules')
     rules = CategoryRule.objects.filter(user=request.user).select_related('category')
     
     # Buscar transações não categorizadas (Outros) para sugestão rápida
