@@ -11,39 +11,32 @@ from .models import Invoice, Transaction
 
 def create_transaction_deduplicated(invoice, date, description, amount, is_predicted=False):
     """
-    Cria uma transação garantindo que não haja duplicidade.
-    1. Se existir uma transação PREVISTA com mesma data, valor e cartão, e estamos criando uma REAL:
-       - Deleta a prevista e cria a real (confirmação do gasto).
-    2. Se já existir uma transação REAL idêntica:
-       - Ignora a nova criação.
-    3. Se já existir uma transação PREVISTA idêntica e estamos criando outra PREVISTA:
-       - Ignora a nova criação.
+    Cria uma transação garantindo integridade entre dados REAIS e PREVISTOS.
+    Previsões (is_predicted=True) são substituídas quando o dado REAL (is_predicted=False) chega.
     """
     from .models import Transaction
     
-    # Critérios de busca para duplicidade
-    # Nota: Usamos o cartão da invoice para o filtro
+    # Buscar duplicatas considerando data, valor e descrição em TODAS as faturas do usuário para este cartão
     duplicate_qs = Transaction.objects.filter(
         invoice__user=invoice.user,
         invoice__credit_card=invoice.credit_card,
         date=date,
-        amount=amount
+        amount=amount,
+        description=description
     )
 
-    # 1. Verificar se existe transação REAL idêntica
-    if duplicate_qs.filter(is_predicted=False).exists():
-        return None # Já existe o gasto real, não faz nada
-
-    # 2. Se estamos tentando criar uma REAL, mas existe uma PREVISTA
-    if not is_predicted:
-        predicted_match = duplicate_qs.filter(is_predicted=True)
-        if predicted_match.exists():
-            predicted_match.delete() # Remove a previsão para dar lugar ao real
-
-    # 3. Se estamos tentando criar uma PREVISTA, mas já existe uma PREVISTA
+    if is_predicted:
+        # Se estamos tentando criar uma PREVISÃO, mas já existe algo (REAL ou PREVISTO), ignora
+        if duplicate_qs.exists():
+            return None
     else:
-        if duplicate_qs.filter(is_predicted=True).exists():
-            return None # Já está previsto, não duplica
+        # Se estamos tentando criar uma REAL, removemos TODAS as previsões idênticas que existirem (em qualquer fatura)
+        predicted_matches = duplicate_qs.filter(is_predicted=True)
+        if predicted_matches.exists():
+            predicted_matches.delete()
+        
+        # Como "a fatura é a lei", permitimos criar o dado REAL mesmo que exista outro igual
+        # (ex: dois gastos idênticos no mesmo dia/valor/loja)
 
     # Criar a transação finalmente
     return Transaction.objects.create(
@@ -92,10 +85,22 @@ def process_inter_pdf(pdf_file, invoice):
             # Fallback para hoje caso não encontre
             due_date = datetime.now().date()
 
-        # Configurar ano/mês da fatura baseado no vencimento (geralmente refere-se ao mês anterior ou atual)
+        # Configurar ano/mês da fatura baseado no vencimento
         invoice.year = due_date.year
         invoice.month = due_date.month
         invoice.save()
+
+        # LIMPEZA ESTRATÉGICA: Ao subir uma fatura REAL, removemos TODAS as previsões
+        # deste cartão para este mês e meses futuros. O arquivo atual será a nova fonte da verdade.
+        from .models import Transaction
+        Transaction.objects.filter(
+            invoice__credit_card=invoice.credit_card,
+            date__year__gte=invoice.year,
+            is_predicted=True
+        ).filter(
+            # Garante que só apague meses futuros do mesmo ano ou qualquer mês de anos futuros
+            models.Q(date__year__gt=invoice.year) | models.Q(date__month__gte=invoice.month)
+        ).delete()
 
         for page in pdf.pages:
             tables = page.extract_tables()
@@ -118,7 +123,6 @@ def process_inter_pdf(pdf_file, invoice):
                     try:
                         # Para o Banco Inter, a data da transação na fatura é informativa.
                         # Todos os gastos de uma fatura "pertencem" financeiramente ao mês de vencimento dela.
-                        # Portanto, usamos o due_date para a transação principal.
                         date_val = due_date 
 
                         # Limpar valor
@@ -150,14 +154,14 @@ def process_inter_pdf(pdf_file, invoice):
                                         f'Parcela {current_installment + i:02d} de {total_installments:02d}'
                                     ).strip()
 
-                                    tp = create_transaction_deduplicated(
+                                    create_transaction_deduplicated(
                                         invoice=invoice,
                                         date=next_date,
                                         description=next_desc,
                                         amount=abs(amount_val),
                                         is_predicted=True
                                     )
-                                    if tp: predictions_created += 1
+                                    predictions_created += 1
 
                     except Exception:
                         continue
@@ -171,110 +175,122 @@ def process_nubank_csv(csv_file, invoice):
     Detecta parcelamentos e cria previsões futuras.
     Também detecta o ano/mês predominante da fatura.
     """
+    import django.db.models as models
+
     # Decodificar o arquivo
     csv_file.seek(0)
     decoded_file = csv_file.read().decode('utf-8').splitlines()
 
+    # Primeira passada: Descobrir o mês predominante para limpar previsões futuras
     reader = csv.reader(decoded_file)
+    try:
+        first_row = next(reader)
+        has_header = any(keyword in str(first_row).lower() for keyword in ['data', 'date', 'descri', 'valor', 'amount'])
+    except StopIteration:
+        return 0, 0
 
-    # Tentar identificar se há header
-    first_row = next(reader)
-    has_header = any(keyword in str(first_row).lower() for keyword in ['data', 'date', 'descri', 'valor', 'amount'])
-
-    # Se não tem header, voltar para o início
     if not has_header:
         csv_file.seek(0)
         decoded_file = csv_file.read().decode('utf-8').splitlines()
         reader = csv.reader(decoded_file)
 
+    dates_found = []
+    rows_to_process = []
+    
+    for row in reader:
+        if len(row) < 3: continue
+        rows_to_process.append(row)
+        # Tentar extrair data de qualquer coluna
+        for cell in row:
+            cell_str = str(cell).strip()
+            if '/' in cell_str or '-' in cell_str:
+                try:
+                    if re.match(r'^\d{4}[/-]', cell_str):
+                        dates_found.append(parser.parse(cell_str, yearfirst=True, dayfirst=False).date())
+                        break
+                    elif re.match(r'^\d{2}[/-]\d{2}[/-]\d{4}$', cell_str) or re.match(r'^\d{2}[/-]\d{2}[/-]\d{2}$', cell_str):
+                        dates_found.append(parser.parse(cell_str, dayfirst=True).date())
+                        break
+                except: pass
+
+    # Determinar ano/mês predominante
+    if dates_found:
+        month_counter = Counter((d.year, d.month) for d in dates_found)
+        most_common = month_counter.most_common(1)[0][0]
+        invoice.year = most_common[0]
+        invoice.month = most_common[1]
+        invoice.save()
+
+        # LIMPEZA ESTRATÉGICA: Remover previsões deste cartão para este mês e meses futuros
+        from .models import Transaction
+        Transaction.objects.filter(
+            invoice__credit_card=invoice.credit_card,
+            is_predicted=True
+        ).filter(
+            models.Q(date__year__gt=invoice.year) | models.Q(date__year=invoice.year, date__month__gte=invoice.month)
+        ).delete()
+
     transactions_created = 0
     predictions_created = 0
-    dates_found = []
 
-    for row in reader:
-        if len(row) < 3:
-            continue
-
+    # Segunda passada: Processar transações
+    for row in rows_to_process:
         try:
-            # Identificar colunas automaticamente
             date_val = None
-            description = None
             amount_val = None
+            desc_cols = []
 
-            for idx, cell in enumerate(row):
+            for cell in row:
                 cell_str = str(cell).strip()
+                if not cell_str: continue
 
-                # Tentar detectar data
-                if not date_val:
+                if date_val is None:
                     try:
                         if '/' in cell_str or '-' in cell_str:
-                            # Detectar se é formato ISO (YYYY-MM-DD ou YYYY/MM/DD)
                             if re.match(r'^\d{4}[/-]', cell_str):
                                 date_val = parser.parse(cell_str, yearfirst=True, dayfirst=False).date()
-                            else:
-                                # Formato brasileiro DD/MM/YYYY ou DD-MM-YYYY
+                                continue
+                            elif re.match(r'^\d{2}[/-]\d{2}[/-]\d{4}$', cell_str) or re.match(r'^\d{2}[/-]\d{2}[/-]\d{2}$', cell_str):
                                 date_val = parser.parse(cell_str, dayfirst=True).date()
-                    except:
-                        pass
+                                continue
+                    except: pass
 
-                # Tentar detectar valor (número com ou sem R$)
-                if not amount_val:
+                if amount_val is None:
                     try:
-                        # Remover R$, espaços e trocar vírgula por ponto
                         clean_amount = cell_str.replace('R$', '').replace(' ', '').replace(',', '.')
-                        # Tentar converter para Decimal
-                        if clean_amount and (clean_amount.replace('.', '').replace('-', '').isdigit()):
+                        if clean_amount and re.match(r'^-?\d+(\.\d+)?$', clean_amount):
                             amount_val = Decimal(clean_amount)
-                    except:
-                        pass
+                            continue
+                    except: pass
+                
+                desc_cols.append(cell_str)
 
-                # Se não é data nem valor, provavelmente é descrição
-                if cell_str and not cell_str.replace('R$', '').replace(' ', '').replace(',', '').replace('.', '').replace('-', '').isdigit():
-                    if '/' not in cell_str and '-' not in cell_str:
-                        if not description or len(cell_str) > len(description):
-                            description = cell_str
-                    # Caso especial: descrição pode conter data e traço, mas geralmente é identificada aqui
-                    elif description is None:
-                         description = cell_str
+            description = " ".join(desc_cols).strip()
 
-
-            # Criar transação se conseguimos identificar os 3 campos
             if date_val and description and amount_val is not None:
-                # Ignorar "Pagamento recebido" - é o pagamento da fatura anterior
-                if 'pagamento recebido' in description.lower():
+                desc_lower = description.lower()
+                if 'pagamento recebido' in desc_lower or 'pagamento efetuado' in desc_lower:
                     continue
 
-                # Criar a transação REAL (atual) deduplicada
                 t = create_transaction_deduplicated(
                     invoice=invoice,
                     date=date_val,
-                    description=description,
-                    amount=abs(amount_val),
+                    description=description.strip(),
+                    amount=amount_val,
                     is_predicted=False
                 )
                 if t: transactions_created += 1
-                dates_found.append(date_val)
 
-                # Verificar parcelamento e criar previsões
-                # Procura por padrões como: "Loja ABC - 01/10" ou "Compra X (1/5)"
-                # Regex procura por digitos/digitos
                 installment_match = re.search(r'(\d{1,2})/(\d{1,2})', description)
-
                 if installment_match:
                     current_installment = int(installment_match.group(1))
                     total_installments = int(installment_match.group(2))
 
-                    # Se detectou parcelamento válido (ex: 1/12) e não é a última
                     if 0 < current_installment < total_installments <= 60:
-                        # Criar as parcelas futuras
                         remaining = total_installments - current_installment
-
                         for i in range(1, remaining + 1):
                             next_date = date_val + relativedelta(months=i)
                             next_installment = current_installment + i
-
-                            # Atualizar descrição: "Loja ABC - 02/10"
-                            # Substitui apenas a ocorrência da parcela
                             new_desc = description.replace(
                                 f'{current_installment:02d}/{total_installments:02d}',
                                 f'{next_installment:02d}/{total_installments:02d}'
@@ -283,20 +299,17 @@ def process_nubank_csv(csv_file, invoice):
                                 f'{next_installment}/{total_installments}'
                             )
 
-                            # Criar a transação PREVISTA deduplicada
-                            tp = create_transaction_deduplicated(
+                            create_transaction_deduplicated(
                                 invoice=invoice,
                                 date=next_date,
-                                description=new_desc,
-                                amount=abs(amount_val),
+                                description=new_desc.strip(),
+                                amount=amount_val,
                                 is_predicted=True
                             )
-                            if tp: predictions_created += 1
+                            predictions_created += 1
+        except Exception: continue
 
-        except Exception as e:
-            # Ignorar linhas com erro
-            print(f"Erro ao processar linha: {row} - {e}")
-            continue
+    return transactions_created, predictions_created
 
     # Determinar ano/mês predominante da fatura
     if dates_found:

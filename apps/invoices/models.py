@@ -5,15 +5,20 @@ from django.contrib.auth.models import User
 
 class Category(models.Model):
     """Categoria de gasto personalizada"""
+    TYPE_CHOICES = [
+        ('expense', 'Despesa (Fatura)'),
+        ('income', 'Receita (Entrada)')
+    ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='categories', null=True, blank=True)
     name = models.CharField(max_length=100)
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES, default='expense', help_text='Define se é categoria de fatura ou de entrada')
     color = models.CharField(max_length=7, default='#667eea', help_text='Cor hex para gráficos')
     icon = models.CharField(max_length=10, default='📁', help_text='Emoji/ícone')
 
     class Meta:
         ordering = ['name']
         verbose_name_plural = 'categories'
-        unique_together = ['user', 'name']
+        unique_together = ['user', 'name', 'type']
 
     def __str__(self):
         return self.name
@@ -122,6 +127,7 @@ class Income(models.Model):
     description = models.CharField(max_length=255)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateField()
+    category = models.CharField(max_length=100, blank=True, help_text='Categoria inferida automaticamente')
     is_recurring = models.BooleanField(default=False, help_text='Indica se foi criado como uma entrada recorrente')
     recurring_group_id = models.CharField(max_length=50, null=True, blank=True, help_text='Agrupa entradas recorrentes para exclusão em lote')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -131,3 +137,25 @@ class Income(models.Model):
 
     def __str__(self):
         return f"{self.date} - {self.description}: R$ {self.amount}"
+
+    def save(self, *args, **kwargs):
+        # Auto-categorizar se não tiver categoria
+        if not self.category:
+            self.category = self.auto_categorize()
+        super().save(*args, **kwargs)
+
+    def auto_categorize(self):
+        """Categoriza automaticamente baseado nas regras de palavra-chave do banco do tipo INCOME"""
+        desc_lower = self.description.lower()
+        
+        # Buscar regras apenas do tipo 'income' para este usuário
+        rules = CategoryRule.objects.filter(
+            user=self.user, 
+            category__type='income'
+        ).select_related('category').order_by('-priority')
+
+        for rule in rules:
+            if rule.keyword.lower() in desc_lower:
+                return rule.category.name
+
+        return 'Outras Entradas'

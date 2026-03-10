@@ -608,7 +608,24 @@ def card_manage(request):
 def income_manage(request):
     """View para gerenciar entradas manuais (receitas)"""
     incomes = Income.objects.filter(user=request.user)
+    
+    # Categorias específicas de receitas
+    income_categories = Category.objects.filter(user=request.user, type='income').prefetch_related('rules')
+    income_rules = CategoryRule.objects.filter(user=request.user, category__type='income').select_related('category')
+    
+    # Criar mapping de categoria -> cor para usar no template
+    category_color_map = {cat.name: cat.color for cat in income_categories}
+    
+    # Adicionar cor a cada income para uso no template
+    for inc in incomes:
+        inc.category_color = category_color_map.get(inc.category, '#10b981')
+    
     form = IncomeForm()
+    category_form = CategoryForm()
+    rule_form = CategoryRuleForm()
+    
+    # Customizando o queryset do rule_form para só exibir categorias de 'income'
+    rule_form.fields['category'].queryset = Category.objects.filter(user=request.user, type='income')
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -660,10 +677,59 @@ def income_manage(request):
                 messages.success(request, '🗑️ Entrada deletada.')
                 
             return redirect('income_manage')
+            
+        elif action == 'add_category':
+            category_form = CategoryForm(request.POST)
+            if category_form.is_valid():
+                cat = category_form.save(commit=False)
+                cat.user = request.user
+                cat.type = 'income' # Força o tipo como receita
+                cat.save()
+                messages.success(request, '✅ Categoria de entrada criada!')
+                return redirect('income_manage')
+
+        elif action == 'add_rule':
+            rule_form = CategoryRuleForm(request.POST)
+            # Re-aplica queryset para validação passar
+            rule_form.fields['category'].queryset = Category.objects.filter(user=request.user, type='income')
+            
+            if rule_form.is_valid():
+                rule = rule_form.save(commit=False)
+                rule.user = request.user
+                rule.save()
+                
+                # Re-categoriza silenciosamente apenas entradas
+                incomes_to_update = Income.objects.filter(user=request.user)
+                for inc in incomes_to_update:
+                    new_cat = inc.auto_categorize()
+                    if new_cat != inc.category:
+                        inc.category = new_cat
+                        inc.save()
+                        
+                messages.success(request, '✅ Regra criada com sucesso!')
+                return redirect('income_manage')
+
+        elif action == 'delete_category':
+            cat_id = request.POST.get('category_id')
+            cat = get_object_or_404(Category, pk=cat_id, user=request.user, type='income')
+            cat.delete()
+            messages.success(request, '🗑️ Categoria de entrada deletada.')
+            return redirect('income_manage')
+
+        elif action == 'delete_rule':
+            rule_id = request.POST.get('rule_id')
+            rule = get_object_or_404(CategoryRule, pk=rule_id, user=request.user, category__type='income')
+            rule.delete()
+            messages.success(request, '🗑️ Regra de entrada deletada.')
+            return redirect('income_manage')
 
     context = {
         'incomes': incomes,
         'form': form,
+        'category_form': category_form,
+        'rule_form': rule_form,
+        'income_categories': income_categories,
+        'income_rules': income_rules,
     }
 
     return render(request, 'invoices/income_manage.html', context)

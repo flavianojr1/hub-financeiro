@@ -87,6 +87,94 @@
         flex-direction: column;
         gap: 10px;
     }
+
+    /* Emoji and Color Pickers from category_manage.html */
+    .emoji-picker-popup {
+        display: none;
+        position: absolute;
+        z-index: 9999;
+        background: var(--bg-card, #1e2136);
+        border: 1px solid var(--border-color, #333);
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        width: 280px;
+        max-height: 260px;
+        overflow-y: auto;
+    }
+
+    .emoji-picker-popup.open {
+        display: block;
+    }
+
+    .emoji-search {
+        width: 100%;
+        margin-bottom: 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color, #444);
+        background: var(--bg-secondary, #151728);
+        color: var(--text-primary);
+        font-size: 0.85rem;
+        box-sizing: border-box;
+    }
+
+    .emoji-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+    }
+
+    .emoji-btn {
+        font-size: 1.4rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 6px;
+        transition: background 0.15s;
+        line-height: 1;
+    }
+
+    .emoji-btn:hover {
+        background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+    }
+
+    .color-picker-popup {
+        display: none;
+        position: absolute;
+        z-index: 9999;
+        background: var(--bg-card, #1e2136);
+        border: 1px solid var(--border-color, #333);
+        border-radius: 10px;
+        padding: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        width: 200px;
+    }
+
+    .color-picker-popup.open {
+        display: block;
+    }
+
+    .color-grid-custom {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .color-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .color-btn:hover {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px rgba(255, 255, 255, 0.2);
+    }
 </style>
 {% endblock %}
 
@@ -98,6 +186,11 @@
         gap: 20px;
     }
 
+    .incomes-list-container {
+        grid-column: 1 / -1;
+        margin-top: var(--spacing-md);
+    }
+
     .incomes-panel {
         height: 100%;
     }
@@ -106,7 +199,6 @@
         display: flex;
         flex-direction: column;
         gap: 15px;
-        margin-bottom: 2rem;
     }
 
     .incomes-form-row {
@@ -114,7 +206,7 @@
         flex-direction: row;
         align-items: center;
         gap: 15px;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
     }
 
     .incomes-form-label {
@@ -133,6 +225,35 @@
         display: flex;
         justify-content: flex-end;
         margin-top: 10px;
+    }
+
+    /* Styles for the category/rule inline section */
+    .mini-crud-section {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .mini-crud-section:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .mini-item-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.4rem 0.5rem;
+        border-radius: var(--radius-sm);
+        transition: background 0.2s ease;
+        margin-bottom: 4px;
+        border: 1px solid transparent;
+    }
+    
+    .mini-item-row:hover {
+        background: var(--bg-hover);
+        border-color: var(--border-color);
     }
 
     .incomes-item {
@@ -187,6 +308,9 @@
     @media (max-width: 1024px) {
         .incomes-page-layout {
             grid-template-columns: 1fr;
+        }
+        .incomes-list-container {
+            grid-column: 1;
         }
     }
 
@@ -264,9 +388,116 @@
             </div>
         </div>
 
-        <!-- Container direito: lista de entradas -->
+        <!-- Container direito: Categorias de Entradas -->
         <div class="incomes-panel">
             <div class="card fade-in-up" style="animation-delay: 0.2s;">
+                <h2 class="card-title"><i class="fi fi-br-tags" style="color: var(--accent-cyan);"></i> Categorização Rápida</h2>
+                
+                <div class="mini-crud-section">
+                    <form method="post" class="inline-add-form" style="margin-bottom: 1rem; padding-bottom: 0; border: none;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_category">
+                        <div class="category-form-row">
+                            <div class="category-form-square">
+                                {{ category_form.icon }}
+                            </div>
+                            <div class="category-form-square" style="position: relative;">
+                                <div style="display: none;">{{ category_form.color }}</div>
+                                <div id="categoryColorDisplay" 
+                                     style="width: 100%; height: 100%; border-radius: 6px; cursor: pointer; background: #10b981; border: 1px solid var(--border-color); display: block;"
+                                     title="Escolher cor"></div>
+                            </div>
+                            <div class="category-form-wide">
+                                {{ category_form.name }}
+                            </div>
+                            <button type="submit" class="btn btn-primary category-btn-square" title="Adicionar Categoria">+</button>
+                        </div>
+                        {% if category_form.errors %}
+                        <div class="form-errors">
+                            {% for field, errors in category_form.errors.items %}
+                                {% for error in errors %}
+                                    <p class="form-error" style="color: var(--danger-color); font-size: 0.8rem;">{{ error }}</p>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </form>
+
+                    {% if income_categories %}
+                    <div style="max-height: 150px; overflow-y: auto; padding-right: 5px;" class="custom-scrollbar">
+                        {% for cat in income_categories %}
+                        <div class="mini-item-row">
+                            <div class="item-info">
+                                <span class="item-icon">{{ cat.icon }}</span>
+                                <span class="item-color-dot" style="background-color: {{ cat.color }};"></span>
+                                <span class="item-name">{{ cat.name }}</span>
+                            </div>
+                            <form method="post" class="inline-form" onsubmit="return confirm('Excluir categoria de entrada?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_category">
+                                <input type="hidden" name="category_id" value="{{ cat.id }}">
+                                <button type="submit" class="btn btn-danger-ghost btn-sm" style="padding: 2px 6px;"><i class="fi fi-br-trash"></i></button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-secondary" style="font-size: 0.85rem; text-align: center;">Nenhuma categoria de receita. Ex: "Salário".</p>
+                    {% endif %}
+                </div>
+
+                <div class="mini-crud-section">
+                    <h4 style="font-size: 0.95rem; margin-bottom: 0.5rem; color: var(--text-secondary);">Regras de Auto-Categorização</h4>
+                    <form method="post" class="form-row" style="margin-bottom: 1rem; flex-wrap: nowrap;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_rule">
+                        <input type="hidden" name="priority" value="0">
+                        <div class="form-group" style="flex: 2;">
+                            {{ rule_form.keyword }}
+                        </div>
+                        <div class="form-group" style="flex: 2;">
+                            {{ rule_form.category }}
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">+</button>
+                    </form>
+                    {% if rule_form.errors %}
+                    <div class="form-errors">
+                        {% for field, errors in rule_form.errors.items %}
+                            {% for error in errors %}
+                                <p class="form-error" style="color: var(--danger-color); font-size: 0.8rem;">{{ error }}</p>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if income_rules %}
+                    <div style="max-height: 150px; overflow-y: auto; padding-right: 5px;" class="custom-scrollbar">
+                        {% for rule in income_rules %}
+                        <div class="mini-item-row">
+                            <div class="item-info" style="font-size: 0.85rem;">
+                                <span class="rule-keyword">{{ rule.keyword }}</span>
+                                <i class="fi fi-br-arrow-right rule-arrow" style="font-size: 0.7rem;"></i>
+                                <span style="color: {{ rule.category.color }}; font-weight: 600;">{{ rule.category.name }}</span>
+                            </div>
+                            <form method="post" class="inline-form" onsubmit="return confirm('Excluir regra?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_rule">
+                                <input type="hidden" name="rule_id" value="{{ rule.id }}">
+                                <button type="submit" class="btn btn-danger-ghost btn-sm" style="padding: 2px 6px;"><i class="fi fi-br-trash"></i></button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-secondary" style="font-size: 0.85rem; text-align: center;">Nenhuma regra criada.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Container Bottom: lista de entradas (100% width) -->
+        <div class="incomes-list-container">
+            <div class="card fade-in-up" style="animation-delay: 0.3s;">
                 <h2 class="card-title"><i class="fi fi-br-list" style="color: var(--accent-purple);"></i> Minhas Entradas</h2>
 
                 {% if incomes %}
@@ -279,9 +510,12 @@
                             </div>
                             <div class="incomes-item-details">
                                 <span class="incomes-item-desc">{{ inc.description }}</span>
-                                <div style="display: flex; gap: 8px; align-items: center;">
+                                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                                     <span class="incomes-item-amount">R$ {{ inc.amount }}</span>
                                     <span class="incomes-item-date">• {{ inc.date|date:"d/m/Y" }}</span>
+                                    {% if inc.category %}
+                                        <span class="badge" style="background: {{ inc.category_color }}1a; color: {{ inc.category_color }}; border: 1px solid {{ inc.category_color }}4d;">{{ inc.category }}</span>
+                                    {% endif %}
                                     {% if inc.is_recurring %}
                                         <span class="badge badge-purple" style="font-size: 0.7rem; padding: 2px 6px;">Recorrente</span>
                                     {% endif %}
@@ -306,14 +540,26 @@
                 {% else %}
                 <div class="empty-state"
                     style="text-align: center; padding: 3rem; background: var(--bg-secondary); border-radius: 8px;">
-                    <div class="empty-icon" style="font-size: 3rem; margin-bottom: 1rem;">💼</div>
+                    <div class="empty-icon" style="font-size: 3rem; margin-bottom: 1rem;"><i class="fi fi-br-wallet"></i></div>
                     <h3>Nenhuma entrada cadastrada</h3>
-                    <p class="text-secondary">Cadastre seus salários ou bônus no formulário ao lado.</p>
+                    <p class="text-secondary">Cadastre seus salários ou bônus no formulário acima.</p>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
+</div>
+
+<!-- Popup de seleção de Cor customizado -->
+<div id="colorPickerPopup" class="color-picker-popup">
+    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600;">Selecione a cor</div>
+    <div class="color-grid-custom" id="colorGrid"></div>
+</div>
+
+<!-- Popup de seleção de Emoji customizado -->
+<div id="emojiPickerPopup" class="emoji-picker-popup">
+    <input type="text" id="emojiSearch" class="emoji-search" placeholder="🔍 Buscar emoji (ex: casa, carro)...">
+    <div class="emoji-grid" id="emojiGrid"></div>
 </div>
 
 <!-- Modal Customizado de Exclusão -->
@@ -434,5 +680,161 @@ function confirmDeleteRecurring(type) {
     }
     closeDeleteModal();
 }
+
+// Sistema de Popup Color Picker para Categorias
+(function () {
+    const COLORS = [
+        "#8A05BE", "#FF7A00", "#00A3E0", "#00A7E1", "#A1C63A",
+        "#242424", "#00FF5F", "#EC008C", "#00843D", "#005EAD",
+        "#EC0000", "#EC7000", "#FCEC14", "#005CA9"
+    ];
+
+    const colorPopup = document.getElementById('colorPickerPopup');
+    const colorGrid = document.getElementById('colorGrid');
+    const colorInput = document.getElementById('categoryColor');
+    const colorDisplay = document.getElementById('categoryColorDisplay');
+
+    if (colorDisplay && colorInput && colorGrid) {
+        // Configura input default
+        if (!colorInput.value) colorInput.value = COLORS[0];
+        colorDisplay.style.backgroundColor = colorInput.value;
+
+        // Renderiza botoes
+        COLORS.forEach(c => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'color-btn';
+            btn.style.backgroundColor = c;
+            btn.addEventListener('click', () => {
+                colorInput.value = c;
+                colorDisplay.style.backgroundColor = c;
+                colorPopup.classList.remove('open');
+            });
+            colorGrid.appendChild(btn);
+        });
+
+        // Abrir popup
+        colorDisplay.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const emojiPopup = document.getElementById('emojiPickerPopup');
+            if (emojiPopup) emojiPopup.classList.remove('open'); // Fecha emoji
+
+            const rect = colorDisplay.getBoundingClientRect();
+            colorPopup.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+            colorPopup.style.left = (rect.left - 150) + 'px'; // Puxa popup p esquerda
+            colorPopup.style.position = 'absolute';
+            colorPopup.classList.toggle('open');
+        });
+
+        // Clicar fora
+        document.addEventListener('click', (e) => {
+            if (!colorPopup.contains(e.target) && e.target !== colorDisplay) {
+                colorPopup.classList.remove('open');
+            }
+        });
+    }
+})();
+
+// Sistema de Popup Emoji Picker para Categorias
+(function () {
+    const EMOJIS = [
+        { c: "😀", k: "feliz sorriso rosto happy smile" },
+        { c: "😂", k: "chorando rindo risada lol laugh" },
+        { c: "😍", k: "amor apaixonado love heart coracao apaixonada" },
+        { c: "😎", k: "oculos sol cool estilo" },
+        { c: "🤓", k: "nerd inteligente" },
+        { c: "🍕", k: "pizza comida food lanche jantar almoço" },
+        { c: "🍔", k: "hamburguer lanche fast food burger mcdonalds ifood" },
+        { c: "🍟", k: "batata frita french fries food" },
+        { c: "🍣", k: "sushi japones comida peixe" },
+        { c: "☕", k: "cafe coffee xicara bebida padaria" },
+        { c: "🍺", k: "cerveja beer bebida alcool bar balada" },
+        { c: "🍷", k: "vinho taca bebida alcool bar" },
+        { c: "🏠", k: "casa home moradia house aluguel" },
+        { c: "🏢", k: "predio escritorio office building condominio apartamento" },
+        { c: "🏥", k: "hospital saude medical medico doenca" },
+        { c: "🚗", k: "carro auto veiculo car automovel gasolina posto uber" },
+        { c: "🚌", k: "onibus bus transporte passagem" },
+        { c: "✈️", k: "aviao airplane viagem voo passagem" },
+        { c: "💳", k: "cartao cartoes credito credit card nubank faturas" },
+        { c: "💰", k: "dinheiro sacola money cash salario pix" },
+        { c: "💵", k: "dolar nota dinheiro bill cash salario" },
+        { c: "🛍️", k: "compras shopping sacola bag loja roupas" },
+        { c: "🛒", k: "carrinho supermercado mercado cart shopping compras" },
+        { c: "🏋️", k: "academia peso gym workout musculacao fit" },
+        { c: "⚽", k: "futebol bola esporte soccer futsal" },
+        { c: "🎮", k: "videogame controle jogo game pc console" },
+        { c: "🎬", k: "cinema filme claquete movie netflix prime streaming" },
+        { c: "🎵", k: "musica nota som music spotify show" },
+        { c: "💊", k: "pilula remedio farmacia saude health pill" },
+        { c: "🩺", k: "estetoscopio medico saude doctor consulta" },
+        { c: "🛠️", k: "ferramentas conserto tool fix oficina" },
+        { c: "🌱", k: "planta semente vegano arvore natureza agro" },
+        { c: "📚", k: "livros estudo escola educacao books faculdade curso" },
+        { c: "🖥️", k: "computador pc monitor desktop trabalho tech ti" },
+        { c: "💻", k: "laptop notebook pc computador ti tech trabalho" },
+        { c: "📱", k: "celular telefone smartphone mobile phone iphone ligacao" },
+        { c: "❤️", k: "coracao heart amor love namoro" },
+        { c: "🐶", k: "cachorro cao dog pet animal" },
+        { c: "🐱", k: "gato felino cat pet animal" },
+        { c: "✂️", k: "tesoura cabelo salao barbeiro" },
+        { c: "⛽", k: "posto gasolina combustivel carro gas" },
+        { c: "🐾", k: "pata animal pet shop veterinario" }
+    ];
+
+    const popup = document.getElementById('emojiPickerPopup');
+    const grid = document.getElementById('emojiGrid');
+    const search = document.getElementById('emojiSearch');
+    let activeInput = null;
+
+    function renderEmojis(list) {
+        grid.innerHTML = '';
+        list.forEach(e => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'emoji-btn';
+            btn.textContent = e.c;
+            btn.title = e.k;
+            btn.addEventListener('click', () => {
+                if (activeInput) activeInput.value = e.c;
+                popup.classList.remove('open');
+            });
+            grid.appendChild(btn);
+        });
+    }
+
+    renderEmojis(EMOJIS);
+
+    if (search) {
+        search.addEventListener('input', () => {
+            const q = search.value.toLowerCase().trim();
+            renderEmojis(q ? EMOJIS.filter(e => e.k.toLowerCase().includes(q)) : EMOJIS);
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (popup && !popup.contains(e.target) && e.target !== activeInput) {
+            popup.classList.remove('open');
+        }
+    });
+
+    const iconInput = document.getElementById('categoryIcon');
+    if (iconInput) {
+        iconInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+            activeInput = iconInput;
+            const rect = iconInput.getBoundingClientRect();
+            popup.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+            popup.style.left = rect.left + 'px';
+            popup.style.position = 'absolute';
+            popup.classList.toggle('open');
+            if (popup.classList.contains('open')) {
+                search.value = '';
+                renderEmojis(EMOJIS);
+                setTimeout(() => search.focus(), 50);
+            }
+        });
+    }
+})();
 </script>
 {% endblock %}
