@@ -2,6 +2,7 @@ import csv
 import re
 import pdfplumber
 import io
+import django.db.models as models
 from decimal import Decimal
 from datetime import datetime
 from collections import Counter
@@ -14,8 +15,6 @@ def create_transaction_deduplicated(invoice, date, description, amount, is_predi
     Cria uma transação garantindo integridade entre dados REAIS e PREVISTOS.
     Previsões (is_predicted=True) são substituídas quando o dado REAL (is_predicted=False) chega.
     """
-    from .models import Transaction
-    
     # Buscar duplicatas considerando data, valor e descrição em TODAS as faturas do usuário para este cartão
     duplicate_qs = Transaction.objects.filter(
         invoice__user=invoice.user,
@@ -92,7 +91,6 @@ def process_inter_pdf(pdf_file, invoice):
 
         # LIMPEZA ESTRATÉGICA: Ao subir uma fatura REAL, removemos TODAS as previsões
         # deste cartão para este mês e meses futuros. O arquivo atual será a nova fonte da verdade.
-        from .models import Transaction
         Transaction.objects.filter(
             invoice__credit_card=invoice.credit_card,
             date__year__gte=invoice.year,
@@ -232,6 +230,7 @@ def process_nubank_csv(csv_file, invoice):
 
     transactions_created = 0
     predictions_created = 0
+    payments = []
 
     # Segunda passada: Processar transações
     for row in rows_to_process:
@@ -269,7 +268,10 @@ def process_nubank_csv(csv_file, invoice):
 
             if date_val and description and amount_val is not None:
                 desc_lower = description.lower()
+                
+                # Coletar pagamentos para análise posterior
                 if 'pagamento recebido' in desc_lower or 'pagamento efetuado' in desc_lower:
+                    payments.append((date_val, description, amount_val))
                     continue
 
                 t = create_transaction_deduplicated(
@@ -308,6 +310,49 @@ def process_nubank_csv(csv_file, invoice):
                             )
                             predictions_created += 1
         except Exception: continue
+
+    # Lógica Inteligente de Pagamentos
+    if payments:
+        from django.db.models import Sum
+        from datetime import date
+        
+        # 1. Tentar encontrar a fatura do mês anterior
+        prev_month_date = date(invoice.year, invoice.month, 1) - relativedelta(months=1)
+        prev_invoice = Invoice.objects.filter(
+            user=invoice.user,
+            credit_card=invoice.credit_card,
+            year=prev_month_date.year,
+            month=prev_month_date.month
+        ).first()
+
+        target_to_ignore = None
+        
+        if prev_invoice:
+            # Se existe fatura anterior, o pagamento que "casa" com o total dela é o que ignoramos
+            prev_total = Transaction.objects.filter(invoice=prev_invoice).aggregate(Sum('amount'))['amount__sum'] or 0
+            if prev_total > 0:
+                # Encontrar o pagamento mais próximo do valor da fatura anterior (em valor absoluto)
+                target_to_ignore = min(payments, key=lambda p: abs(abs(p[2]) - prev_total))
+        
+        if not target_to_ignore:
+            # 2. Se não houver fatura anterior ou não bateu o valor, ignoramos o de maior valor (pagamento da fatura)
+            target_to_ignore = min(payments, key=lambda p: p[2]) # p[2] é negativo, então min() pega o mais negativo
+
+        # Adicionar os demais como pagamentos antecipados (reduzem o total)
+        for p_date, p_desc, p_amount in payments:
+            if (p_date, p_desc, p_amount) == target_to_ignore:
+                target_to_ignore = None # Ignora apenas uma ocorrência
+                continue
+            
+            # Criar como transação real (negativa)
+            create_transaction_deduplicated(
+                invoice=invoice,
+                date=p_date,
+                description=f"{p_desc.strip()} (Antecipado)",
+                amount=p_amount,
+                is_predicted=False
+            )
+            transactions_created += 1
 
     return transactions_created, predictions_created
 
