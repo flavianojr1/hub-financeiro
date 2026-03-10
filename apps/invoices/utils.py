@@ -451,11 +451,15 @@ def get_temporal_data(transactions=None):
 
     datasets = []
     for name, info in cards_info.items():
+        total = sum(info['data'])
         datasets.append({
             'label': name,
             'data': info['data'],
-            'color': info['color']
+            'color': info['color'],
+            'total': total
         })
+    
+    datasets.sort(key=lambda x: x['total'])
 
     return {
         'labels': labels,
