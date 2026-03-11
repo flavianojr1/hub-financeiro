@@ -315,9 +315,11 @@
             }
 
             if (data.transactions && data.transactions.length > 0) {
-                let html = '<table class="table"><thead><tr><th style="font-size: 0.7rem;">Data</th><th style="font-size: 0.7rem;">Descrição</th><th style="font-size: 0.7rem;">Valor</th></tr></thead><tbody>';
+                let html = '<table class="table"><thead><tr><th style="font-size: 0.7rem;">Data</th><th style="font-size: 0.7rem;">Descrição</th><th style="font-size: 0.7rem;">Categoria</th><th style="font-size: 0.7rem;">Valor</th></tr></thead><tbody>';
                 data.transactions.forEach(t => {
-                    html += '<tr><td style="font-size: 0.8rem;">' + t.date + '</td><td style="font-size: 0.8rem;">' + t.description + '</td><td style="font-size: 0.8rem;"><strong>R$ ' + t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong></td></tr>';
+                    const catColor = t.category_color || '#6b7280';
+                    const categoryBadge = '<span class="badge" style="background: ' + catColor + '1a; color: ' + catColor + '; border: 1px solid ' + catColor + '4d; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 500;">' + (t.category || 'Outros') + '</span>';
+                    html += '<tr><td style="font-size: 0.8rem;">' + t.date + '</td><td style="font-size: 0.8rem;">' + t.description + '</td><td style="font-size: 0.8rem;">' + categoryBadge + '</td><td style="font-size: 0.8rem;"><strong>R$ ' + t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong></td></tr>';
                 });
                 html += '</tbody></table>';
                 tableContainer.innerHTML = html;

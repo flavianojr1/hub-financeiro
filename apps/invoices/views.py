@@ -547,15 +547,25 @@ def get_transactions_data(request):
             pass
 
     transactions_list = transactions.order_by('-date', 'description').values(
-        'date', 'description', 'amount'
+        'date', 'description', 'amount', 'category'
     )
+    
+    from apps.invoices.models import Category
+    category_names = set(t['category'] for t in transactions_list if t.get('category'))
+    category_colors = {}
+    for cat_name in category_names:
+        cat = Category.objects.filter(name=cat_name).first()
+        if cat:
+            category_colors[cat_name] = cat.color
 
     result = {
         'transactions': [
             {
                 'date': t['date'].strftime('%d/%m') if t['date'] else '',
                 'description': t['description'] or '',
-                'amount': float(t['amount']) if t['amount'] else 0
+                'amount': float(t['amount']) if t['amount'] else 0,
+                'category': t.get('category', 'Outros'),
+                'category_color': category_colors.get(t.get('category', 'Outros'), '#6b7280')
             }
             for t in transactions_list
         ]
