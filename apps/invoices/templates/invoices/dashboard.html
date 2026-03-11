@@ -59,18 +59,18 @@
     }
 
     .btn-voltar {
-        padding: 8px 16px;
-        height: 42px;
+        padding: 6px 14px;
+        height: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 12px;
+        border-radius: 8px;
         background: rgba(138, 5, 190, 0.1);
         border: 1px solid rgba(138, 5, 190, 0.2);
         color: #8A05BE;
         cursor: pointer;
         transition: all 0.3s ease;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         font-weight: 500;
         margin-left: 8px;
     }
@@ -84,6 +84,21 @@
 
     .btn-voltar.hidden {
         display: none;
+    }
+
+    @keyframes slideInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .search-wrapper-animate {
+        animation: slideInLeft 0.3s ease-out forwards;
     }
 </style>
 <!-- Stats Grid - Compacted -->
@@ -383,12 +398,19 @@
             seeMoreContainer.innerHTML = '<div id="seeMoreBtn" style="text-align: center; margin-top: 1rem;"><button class="btn btn-primary" onclick="expandTransactions()">Ver mais</button></div>';
             transactionsContainer.classList.remove('expanded');
             const searchWrapper = document.getElementById('searchWrapper');
-            if (searchWrapper) searchWrapper.style.display = 'none';
-        } else {
+            if (searchWrapper) {
+                searchWrapper.classList.remove('search-wrapper-animate');
+                searchWrapper.style.display = 'none';
+            }
             seeMoreContainer.innerHTML = '';
             transactionsContainer.classList.add('expanded');
             const searchWrapper = document.getElementById('searchWrapper');
-            if (searchWrapper) searchWrapper.style.display = 'flex';
+            if (searchWrapper) {
+                searchWrapper.classList.remove('search-wrapper-animate');
+                void searchWrapper.offsetWidth;
+                searchWrapper.style.display = 'flex';
+                searchWrapper.classList.add('search-wrapper-animate');
+            }
         }
     }
 
