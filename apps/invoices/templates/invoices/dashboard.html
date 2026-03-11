@@ -137,41 +137,7 @@
 
 {% if has_any_data %}
 
-{% if filtered %}
-<!-- Modo filtrado: gráfico de categorias + lista de transações -->
-<div class="charts-grid" style="display: grid; grid-template-columns: 45fr 55fr; gap: 1rem; margin-bottom: 1rem;">
-    <div class="chart-card" style="padding: var(--spacing-md);">
-        <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><i class="fi fi-br-chart-pie"></i> Categorias</h2>
-        <div class="chart-container" style="height: 320px;">
-            <canvas id="categoryChart"></canvas>
-        </div>
-    </div>
-    <div class="card" style="padding: var(--spacing-md); margin-bottom: 0; overflow: hidden;">
-        <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;">📋 Lançamentos</h2>
-        <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th style="font-size: 0.7rem;">Data</th>
-                        <th style="font-size: 0.7rem;">Descrição</th>
-                        <th style="font-size: 0.7rem;">Valor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in transactions %}
-                    <tr>
-                        <td style="font-size: 0.8rem;">{{ t.date|date:"d/m" }}</td>
-                        <td style="font-size: 0.8rem;">{{ t.description|truncatechars:20 }}</td>
-                        <td style="font-size: 0.8rem;"><strong>R$ {{ t.amount|floatformat:2 }}</strong></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-{% else %}
-<!-- Modo geral: gráfico temporal + categorias -->
+<!-- Layout unificado: sempre mostra os 2 gráficos -->
 <div class="charts-grid" style="display: grid; grid-template-columns: 55fr 45fr; gap: 1rem; margin-bottom: 1rem;">
     <div class="chart-card" style="padding: var(--spacing-md); position: relative;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -197,7 +163,6 @@
         </div>
     </div>
 </div>
-{% endif %}
 
 <!-- Modal para Gráfico Expandido -->
 <div id="chartModal" class="chart-modal">
