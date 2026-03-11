@@ -270,10 +270,16 @@
                 setTimeout(() => transactionsContainer.style.display = 'none', 200);
             }
             cachedTransactions = [];
+            const searchInput = document.getElementById('transactionsSearch');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.style.display = 'none';
+            }
             return;
         }
 
         seeMoreExpanded = false;
+        lastSearchQuery = '';
         
         try {
             let url = TRANSACTIONS_API_URL + card + '&month=' + month + '&sort=' + currentSort.field + '&order=' + currentSort.order;
@@ -344,9 +350,13 @@
         if (hasMore && showSeeMore) {
             seeMoreContainer.innerHTML = '<div id="seeMoreBtn" style="text-align: center; margin-top: 1rem;"><button class="btn btn-primary" onclick="expandTransactions()">Ver mais</button></div>';
             transactionsContainer.classList.remove('expanded');
+            const searchInput = document.getElementById('transactionsSearch');
+            if (searchInput) searchInput.style.display = 'none';
         } else {
             seeMoreContainer.innerHTML = '';
             transactionsContainer.classList.add('expanded');
+            const searchInput = document.getElementById('transactionsSearch');
+            if (searchInput) searchInput.style.display = 'block';
         }
     }
 
@@ -367,8 +377,45 @@
         if (cachedTransactions.length > 0) {
             seeMoreExpanded = true;
             renderTransactionsTable(cachedTransactions, false);
+            const searchInput = document.getElementById('transactionsSearch');
+            if (searchInput) {
+                searchInput.style.display = 'block';
+            }
         }
     }
+
+    // Função para filtrar transações pelo search input
+    let lastSearchQuery = '';
+    function filterTransactions(query) {
+        if (query.trim().length < 3) {
+            if (lastSearchQuery !== '') {
+                lastSearchQuery = '';
+                renderTransactionsTable(cachedTransactions, false);
+            }
+            return;
+        }
+        
+        if (query.trim() === lastSearchQuery) {
+            return;
+        }
+        
+        lastSearchQuery = query.trim();
+        const lowerQuery = lastSearchQuery.toLowerCase();
+        const filtered = cachedTransactions.filter(t => 
+            t.description.toLowerCase().includes(lowerQuery)
+        );
+        renderTransactionsTable(filtered, false);
+    }
+
+    // Event listener para o search input
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('transactionsSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                filterTransactions(e.target.value);
+            });
+        }
+    });
 
     function resetFilters() {
         const btn = document.getElementById('btnResetFilters');
@@ -384,6 +431,13 @@
         
         currentSort = { field: 'date', order: 'desc' };
         seeMoreExpanded = false;
+        lastSearchQuery = '';
+        
+        const searchInput = document.getElementById('transactionsSearch');
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.style.display = 'none';
+        }
         
         updateDashboardFilters();
     }
@@ -516,7 +570,10 @@
 
     <!-- Lançamentos do mês selecionado (substitui o resumo quando há mês selecionado) -->
     <div id="transactionsContainer" class="transactions-wrapper">
-        <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><i class="fi fi-br-list"></i> Lançamentos do Mês</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h2 class="card-title" style="font-size: 1rem; margin: 0;"><i class="fi fi-br-list"></i> Lançamentos do Mês</h2>
+            <input type="text" id="transactionsSearch" class="form-input" placeholder="🔍 Buscar transação..." style="max-width: 250px; display: none;">
+        </div>
         <div class="table-wrapper">
             <div class="table-responsive">
             </div>
