@@ -278,6 +278,9 @@
         }
     }
 
+    // Armazenar transações globalmente para poder expandir
+    let cachedTransactions = [];
+
     // URL para API de transações
     const TRANSACTIONS_API_URL = '{% url "transactions_data" %}?card=';
 
@@ -298,6 +301,7 @@
                 transactionsContainer.style.opacity = '0';
                 setTimeout(() => transactionsContainer.style.display = 'none', 200);
             }
+            cachedTransactions = [];
             return;
         }
 
@@ -308,23 +312,20 @@
             const data = await response.json();
             console.log('Transactions data:', data);
 
-            const tableContainer = transactionsContainer.querySelector('.table-responsive');
+            const tableContainer = transactionsContainer.querySelector('.table-wrapper .table-responsive');
             if (!tableContainer) {
                 console.error('Table container not found');
                 return;
             }
 
-            if (data.transactions && data.transactions.length > 0) {
-                let html = '<table class="table"><thead><tr><th style="font-size: 0.7rem;">Data</th><th style="font-size: 0.7rem;">Descrição</th><th style="font-size: 0.7rem;">Categoria</th><th style="font-size: 0.7rem;">Valor</th></tr></thead><tbody>';
-                data.transactions.forEach(t => {
-                    const catColor = t.category_color || '#6b7280';
-                    const categoryBadge = '<span class="badge" style="background: ' + catColor + '1a; color: ' + catColor + '; border: 1px solid ' + catColor + '4d; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 500;">' + (t.category || 'Outros') + '</span>';
-                    html += '<tr><td style="font-size: 0.8rem;">' + t.date + '</td><td style="font-size: 0.8rem;">' + t.description + '</td><td style="font-size: 0.8rem;">' + categoryBadge + '</td><td style="font-size: 0.8rem;"><strong>R$ ' + t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong></td></tr>';
-                });
-                html += '</tbody></table>';
-                tableContainer.innerHTML = html;
+            // Armazenar todas as transações
+            cachedTransactions = data.transactions || [];
+
+            if (cachedTransactions.length > 0) {
+                renderTransactionsTable(cachedTransactions, true);
             } else {
                 tableContainer.innerHTML = '<p style="padding: 1rem; text-align: center; color: var(--text-secondary);">Nenhuma transação neste mês.</p>';
+                transactionsContainer.querySelector('.see-more-container').innerHTML = '';
             }
 
             // Ocultar resumo mensal, mostrar lançamentos
@@ -336,6 +337,43 @@
             setTimeout(() => transactionsContainer.style.opacity = '1', 50);
         } catch (error) {
             console.error('Erro ao buscar transações:', error);
+        }
+    }
+
+    function renderTransactionsTable(transactions, showSeeMore) {
+        const transactionsContainer = document.getElementById('transactionsContainer');
+        const tableContainer = transactionsContainer.querySelector('.table-wrapper .table-responsive');
+        
+        const displayLimit = 10;
+        const hasMore = transactions.length > displayLimit;
+        const toShow = hasMore && showSeeMore ? transactions.slice(0, displayLimit) : transactions;
+        
+        let html = '<table class="table"><thead><tr><th style="font-size: 0.7rem;">Data</th><th style="font-size: 0.7rem;">Descrição</th><th style="font-size: 0.7rem;">Categoria</th><th style="font-size: 0.7rem;">Valor</th></tr></thead><tbody>';
+        
+        toShow.forEach((t, index) => {
+            const catColor = t.category_color || '#6b7280';
+            const categoryBadge = '<span class="badge" style="background: ' + catColor + '1a; color: ' + catColor + '; border: 1px solid ' + catColor + '4d; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 500;">' + (t.category || 'Outros') + '</span>';
+            const delay = Math.min(index * 0.03, 0.5);
+            html += '<tr style="animation-delay: ' + delay + 's"><td style="font-size: 0.8rem;">' + t.date + '</td><td style="font-size: 0.8rem;">' + t.description + '</td><td style="font-size: 0.8rem;">' + categoryBadge + '</td><td style="font-size: 0.8rem;"><strong>R$ ' + t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong></td></tr>';
+        });
+        html += '</tbody></table>';
+        
+        tableContainer.innerHTML = html;
+        
+        const seeMoreContainer = transactionsContainer.querySelector('.see-more-container');
+        if (hasMore && showSeeMore) {
+            seeMoreContainer.innerHTML = '<div id="seeMoreBtn" style="text-align: center; margin-top: 1rem;"><button class="btn btn-primary" onclick="expandTransactions()">Ver mais</button></div>';
+            transactionsContainer.classList.remove('expanded');
+        } else {
+            seeMoreContainer.innerHTML = '';
+            transactionsContainer.classList.add('expanded');
+        }
+    }
+
+    // Função para expandir transações
+    function expandTransactions() {
+        if (cachedTransactions.length > 0) {
+            renderTransactionsTable(cachedTransactions, false);
         }
     }
 
@@ -411,6 +449,32 @@
     #monthlySummaryContainer {
         transition: opacity 0.2s ease-in-out;
     }
+    
+    .transactions-wrapper .table-wrapper {
+        max-height: 450px;
+        overflow: hidden;
+        transition: max-height 0.4s ease-out;
+    }
+    
+    .transactions-wrapper.expanded .table-wrapper {
+        max-height: none;
+        overflow: visible;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .table tbody tr {
+        animation: slideDown 0.3s ease-out forwards;
+    }
 </style>
 
 <!-- Resumo Mensal / Lançamentos -->
@@ -454,10 +518,13 @@
     </div>
 
     <!-- Lançamentos do mês selecionado (substitui o resumo quando há mês selecionado) -->
-    <div id="transactionsContainer" style="display: none;">
+    <div id="transactionsContainer" class="transactions-wrapper">
         <h2 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><i class="fi fi-br-list"></i> Lançamentos do Mês</h2>
-        <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+        <div class="table-wrapper">
+            <div class="table-responsive">
+            </div>
         </div>
+        <div class="see-more-container"></div>
     </div>
 </div>
 
