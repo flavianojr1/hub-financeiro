@@ -57,6 +57,34 @@
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
     }
+
+    .btn-voltar {
+        padding: 8px 16px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: rgba(138, 5, 190, 0.1);
+        border: 1px solid rgba(138, 5, 190, 0.2);
+        color: #8A05BE;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-left: 8px;
+    }
+
+    .btn-voltar:hover {
+        background: rgba(138, 5, 190, 0.15);
+        border-color: rgba(138, 5, 190, 0.4);
+        box-shadow: 0 4px 12px rgba(138, 5, 190, 0.2);
+        transform: translateY(-1px);
+    }
+
+    .btn-voltar.hidden {
+        display: none;
+    }
 </style>
 <!-- Stats Grid - Compacted -->
 <div class="stats-grid" style="margin-bottom: 1rem;">
@@ -302,6 +330,12 @@
                 transactionsContainer.querySelector('.see-more-container').innerHTML = '';
             }
 
+            // Mostrar botão Voltar quando há mês selecionado
+            const btnVoltar = document.getElementById('btnVoltar');
+            if (btnVoltar) {
+                btnVoltar.classList.remove('hidden');
+            }
+
             // Ocultar resumo mensal, mostrar lançamentos
             if (monthlySummaryContainer) {
                 monthlySummaryContainer.style.opacity = '0';
@@ -439,6 +473,11 @@
             searchWrapper.style.display = 'none';
         }
         
+        const btnVoltar = document.getElementById('btnVoltar');
+        if (btnVoltar) {
+            btnVoltar.classList.add('hidden');
+        }
+        
         updateDashboardFilters();
     }
 
@@ -572,10 +611,13 @@
     <div id="transactionsContainer" class="transactions-wrapper">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
             <h2 class="card-title" style="font-size: 1rem; margin: 0;"><i class="fi fi-br-list"></i> Lançamentos do Mês</h2>
-            <div id="searchWrapper" style="display: none; align-items: center; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; max-width: 280px; transition: border-color 0.2s ease;">
-                <i class="fi fi-br-search" style="color: var(--accent-purple); font-size: 0.9rem; margin-right: 6px; display: flex; align-items: center;"></i>
-                <span style="color: var(--border-color); margin-right: 6px;">|</span>
-                <input type="text" id="transactionsSearch" class="form-input" placeholder="Buscar transação..." style="border: none; background: transparent; padding: 6px 0; font-size: 0.85rem; width: 100%; outline: none; box-shadow: none;" onfocus="this.closest('#searchWrapper').style.borderColor='var(--accent-purple)'" onblur="this.closest('#searchWrapper').style.borderColor='var(--border-color)'">
+            <div style="display: flex; align-items: center;">
+                <div id="searchWrapper" style="display: none; align-items: center; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; max-width: 280px; transition: border-color 0.2s ease; flex-shrink: 0;">
+                    <i class="fi fi-br-search" style="color: var(--accent-purple); font-size: 0.9rem; margin-right: 6px; display: flex; align-items: center;"></i>
+                    <span style="color: var(--border-color); margin-right: 6px;">|</span>
+                    <input type="text" id="transactionsSearch" class="form-input" placeholder="Buscar transação..." style="border: none; background: transparent; padding: 6px 0; font-size: 0.85rem; width: 100%; outline: none; box-shadow: none;" onfocus="this.closest('#searchWrapper').style.borderColor='var(--accent-purple)'" onblur="this.closest('#searchWrapper').style.borderColor='var(--border-color)'">
+                </div>
+                <button id="btnVoltar" class="btn-voltar hidden" onclick="resetFilters()">Voltar</button>
             </div>
         </div>
         <div class="table-wrapper">
