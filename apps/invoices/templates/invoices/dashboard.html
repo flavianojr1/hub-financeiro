@@ -59,8 +59,8 @@
     }
 
     .btn-voltar {
-        padding: 6px 14px;
-        height: 32px;
+        padding: 4px 12px;
+        height: 28px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -439,7 +439,33 @@
             if (searchWrapper) {
                 searchWrapper.style.display = 'flex';
             }
+            // Scroll suave para o container de transações
+            setTimeout(() => {
+                const transactionsContainer = document.getElementById('transactionsContainer');
+                if (transactionsContainer) {
+                    const targetY = transactionsContainer.getBoundingClientRect().top + window.scrollY - 100;
+                    smoothScrollTo(targetY, 800);
+                }
+            }, 50);
         }
+    }
+
+    // Função de scroll suave com duração customizável
+    function smoothScrollTo(targetY, duration = 800) {
+        const startY = window.scrollY;
+        const diff = targetY - startY;
+        const startTime = performance.now();
+        
+        function step(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease = progress * (2 - progress);
+            window.scrollTo(0, startY + diff * ease);
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            }
+        }
+        requestAnimationFrame(step);
     }
 
     // Função para filtrar transações pelo search input
@@ -463,6 +489,15 @@
             t.description.toLowerCase().includes(lowerQuery)
         );
         renderTransactionsTable(filtered, false);
+        
+        // Scroll suave para o container de transações
+        setTimeout(() => {
+            const transactionsContainer = document.getElementById('transactionsContainer');
+            if (transactionsContainer) {
+                const targetY = transactionsContainer.getBoundingClientRect().top + window.scrollY - 100;
+                smoothScrollTo(targetY, 800);
+            }
+        }, 50);
     }
 
     // Event listener para o search input
@@ -587,6 +622,7 @@
     #transactionsContainer {
         transition: opacity 0.2s ease-in-out;
         opacity: 0;
+        min-height: 600px;
     }
     #monthlySummaryContainer {
         transition: opacity 0.2s ease-in-out;
