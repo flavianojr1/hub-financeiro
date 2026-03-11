@@ -277,7 +277,6 @@
             return;
         }
 
-        seeMoreExpanded = false;
         lastSearchQuery = '';
         
         try {
@@ -297,7 +296,7 @@
             cachedTransactions = data.transactions || [];
 
             if (cachedTransactions.length > 0) {
-                renderTransactionsTable(cachedTransactions, true);
+                renderTransactionsTable(cachedTransactions, !seeMoreExpanded);
             } else {
                 tableContainer.innerHTML = '<p style="padding: 1rem; text-align: center; color: var(--text-secondary);">Nenhuma transação neste mês.</p>';
                 transactionsContainer.querySelector('.see-more-container').innerHTML = '';
@@ -367,7 +366,6 @@
             currentSort.field = field;
             currentSort.order = 'asc';
         }
-        seeMoreExpanded = false;
         updateTransactionsAJAX(SELECTED_CARD, SELECTED_MONTH);
     }
     
@@ -574,10 +572,10 @@
     <div id="transactionsContainer" class="transactions-wrapper">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
             <h2 class="card-title" style="font-size: 1rem; margin: 0;"><i class="fi fi-br-list"></i> Lançamentos do Mês</h2>
-            <div id="searchWrapper" style="display: none; align-items: center; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; max-width: 280px;">
-                <i class="fi fi-br-search" style="color: var(--text-muted); font-size: 0.9rem; margin-right: 6px;"></i>
+            <div id="searchWrapper" style="display: none; align-items: center; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; max-width: 280px; transition: border-color 0.2s ease;">
+                <i class="fi fi-br-search" style="color: var(--accent-purple); font-size: 0.9rem; margin-right: 6px; display: flex; align-items: center;"></i>
                 <span style="color: var(--border-color); margin-right: 6px;">|</span>
-                <input type="text" id="transactionsSearch" class="form-input" placeholder="Buscar transação..." style="border: none; background: transparent; padding: 4px 0; font-size: 0.85rem; width: 100%; outline: none;">
+                <input type="text" id="transactionsSearch" class="form-input" placeholder="Buscar transação..." style="border: none; background: transparent; padding: 6px 0; font-size: 0.85rem; width: 100%; outline: none; box-shadow: none;" onfocus="this.closest('#searchWrapper').style.borderColor='var(--accent-purple)'" onblur="this.closest('#searchWrapper').style.borderColor='var(--border-color)'">
             </div>
         </div>
         <div class="table-wrapper">
