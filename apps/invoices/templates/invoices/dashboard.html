@@ -475,6 +475,26 @@
         }
     });
 
+    function updateMonthlySummaryButtons() {
+        const monthSelector = document.getElementById('monthSelector');
+        const selectedMonth = monthSelector ? monthSelector.value : '';
+        const table = document.getElementById('monthlySummaryTable');
+        if (!table) return;
+        
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const rowMonth = row.getAttribute('data-month');
+            const btnCell = row.querySelector('td:last-child');
+            if (!btnCell) return;
+            
+            if (rowMonth === selectedMonth) {
+                btnCell.innerHTML = '<a href="javascript:void(0)" onclick="document.getElementById(\'monthSelector\').value=\'\'; updateDashboardFilters();" class="btn btn-secondary btn-xs">Voltar</a>';
+            } else {
+                btnCell.innerHTML = '<a href="javascript:void(0)" onclick="document.getElementById(\'monthSelector\').value=\'' + rowMonth + '\'; updateDashboardFilters();" class="btn btn-primary btn-xs">Ver</a>';
+            }
+        });
+    }
+
     function resetFilters() {
         const btn = document.getElementById('btnResetFilters');
         if (btn) {
@@ -507,6 +527,7 @@
         }
         
         updateDashboardFilters();
+        updateMonthlySummaryButtons();
     }
 
     function updateDashboardFilters() {
@@ -528,6 +549,9 @@
         currentMonth = month;
         SELECTED_CARD = card;
         SELECTED_MONTH = month;
+
+        // Atualizar botões do Resumo Mensal
+        updateMonthlySummaryButtons();
 
         // Atualizar classe das linhas do resumo mensal
         document.querySelectorAll('#monthlySummaryTable tbody tr').forEach(row => {
@@ -686,6 +710,8 @@
         if (SELECTED_MONTH) {
             updateTransactionsAJAX(SELECTED_CARD, SELECTED_MONTH);
         }
+        // Atualizar botões do Resumo Mensal para refletir o estado inicial
+        updateMonthlySummaryButtons();
     });
 </script>
 <script src="{% static 'js/charts.js' %}?v={% now 'U' %}"></script>
