@@ -270,10 +270,9 @@
                 setTimeout(() => transactionsContainer.style.display = 'none', 200);
             }
             cachedTransactions = [];
-            const searchInput = document.getElementById('transactionsSearch');
-            if (searchInput) {
-                searchInput.value = '';
-                searchInput.style.display = 'none';
+            const searchWrapper = document.getElementById('searchWrapper');
+            if (searchWrapper) {
+                searchWrapper.style.display = 'none';
             }
             return;
         }
@@ -350,13 +349,13 @@
         if (hasMore && showSeeMore) {
             seeMoreContainer.innerHTML = '<div id="seeMoreBtn" style="text-align: center; margin-top: 1rem;"><button class="btn btn-primary" onclick="expandTransactions()">Ver mais</button></div>';
             transactionsContainer.classList.remove('expanded');
-            const searchInput = document.getElementById('transactionsSearch');
-            if (searchInput) searchInput.style.display = 'none';
+            const searchWrapper = document.getElementById('searchWrapper');
+            if (searchWrapper) searchWrapper.style.display = 'none';
         } else {
             seeMoreContainer.innerHTML = '';
             transactionsContainer.classList.add('expanded');
-            const searchInput = document.getElementById('transactionsSearch');
-            if (searchInput) searchInput.style.display = 'block';
+            const searchWrapper = document.getElementById('searchWrapper');
+            if (searchWrapper) searchWrapper.style.display = 'flex';
         }
     }
 
@@ -377,9 +376,9 @@
         if (cachedTransactions.length > 0) {
             seeMoreExpanded = true;
             renderTransactionsTable(cachedTransactions, false);
-            const searchInput = document.getElementById('transactionsSearch');
-            if (searchInput) {
-                searchInput.style.display = 'block';
+            const searchWrapper = document.getElementById('searchWrapper');
+            if (searchWrapper) {
+                searchWrapper.style.display = 'flex';
             }
         }
     }
@@ -434,9 +433,12 @@
         lastSearchQuery = '';
         
         const searchInput = document.getElementById('transactionsSearch');
+        const searchWrapper = document.getElementById('searchWrapper');
         if (searchInput) {
             searchInput.value = '';
-            searchInput.style.display = 'none';
+        }
+        if (searchWrapper) {
+            searchWrapper.style.display = 'none';
         }
         
         updateDashboardFilters();
@@ -572,7 +574,11 @@
     <div id="transactionsContainer" class="transactions-wrapper">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
             <h2 class="card-title" style="font-size: 1rem; margin: 0;"><i class="fi fi-br-list"></i> Lançamentos do Mês</h2>
-            <input type="text" id="transactionsSearch" class="form-input" placeholder="🔍 Buscar transação..." style="max-width: 250px; display: none;">
+            <div id="searchWrapper" style="display: none; align-items: center; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; max-width: 280px;">
+                <i class="fi fi-br-search" style="color: var(--text-muted); font-size: 0.9rem; margin-right: 6px;"></i>
+                <span style="color: var(--border-color); margin-right: 6px;">|</span>
+                <input type="text" id="transactionsSearch" class="form-input" placeholder="Buscar transação..." style="border: none; background: transparent; padding: 4px 0; font-size: 0.85rem; width: 100%; outline: none;">
+            </div>
         </div>
         <div class="table-wrapper">
             <div class="table-responsive">
