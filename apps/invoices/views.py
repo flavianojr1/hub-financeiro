@@ -546,7 +546,15 @@ def get_transactions_data(request):
         except (ValueError, IndexError):
             pass
 
-    transactions_list = transactions.order_by('-date', 'description').values(
+    sort_field = request.GET.get('sort', 'date')
+    sort_order = request.GET.get('order', 'desc')
+    
+    valid_fields = {'date', 'description', 'category', 'amount'}
+    if sort_field not in valid_fields:
+        sort_field = 'date'
+    
+    order_prefix = '-' if sort_order == 'desc' else ''
+    transactions_list = transactions.order_by(f'{order_prefix}{sort_field}', 'description').values(
         'date', 'description', 'amount', 'category'
     )
     

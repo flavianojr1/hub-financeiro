@@ -250,6 +250,9 @@
     const TRANSACTIONS_API_URL = '{% url "transactions_data" %}?card=';
 
     // Função para atualizar lista de lançamentos via AJAX
+    let currentSort = { field: 'date', order: 'desc' };
+    let seeMoreExpanded = false;
+
     async function updateTransactionsAJAX(card, month) {
         const transactionsContainer = document.getElementById('transactionsContainer');
         const monthlySummaryContainer = document.getElementById('monthlySummaryContainer');
@@ -270,8 +273,10 @@
             return;
         }
 
+        seeMoreExpanded = false;
+        
         try {
-            let url = TRANSACTIONS_API_URL + card + '&month=' + month;
+            let url = TRANSACTIONS_API_URL + card + '&month=' + month + '&sort=' + currentSort.field + '&order=' + currentSort.order;
             console.log('Fetching transactions from:', url);
             const response = await fetch(url);
             const data = await response.json();
@@ -313,7 +318,17 @@
         const hasMore = transactions.length > displayLimit;
         const toShow = hasMore && showSeeMore ? transactions.slice(0, displayLimit) : transactions;
         
-        let html = '<table class="table"><thead><tr><th style="font-size: 0.7rem;">Data</th><th style="font-size: 0.7rem;">Descrição</th><th style="font-size: 0.7rem;">Categoria</th><th style="font-size: 0.7rem;">Valor</th></tr></thead><tbody>';
+        const getSortIcon = (field) => {
+            if (currentSort.field !== field) return '↕';
+            return currentSort.order === 'asc' ? '↗' : '↘';
+        };
+        
+        let html = '<table class="table"><thead><tr>';
+        html += '<th style="font-size: 0.7rem; cursor: pointer;" onclick="sortTransactions(\'date\')">Data ' + getSortIcon('date') + '</th>';
+        html += '<th style="font-size: 0.7rem; cursor: pointer;" onclick="sortTransactions(\'description\')">Descrição ' + getSortIcon('description') + '</th>';
+        html += '<th style="font-size: 0.7rem; cursor: pointer;" onclick="sortTransactions(\'category\')">Categoria ' + getSortIcon('category') + '</th>';
+        html += '<th style="font-size: 0.7rem; cursor: pointer;" onclick="sortTransactions(\'amount\')">Valor ' + getSortIcon('amount') + '</th>';
+        html += '</tr></thead><tbody>';
         
         toShow.forEach((t, index) => {
             const catColor = t.category_color || '#6b7280';
@@ -335,9 +350,22 @@
         }
     }
 
+    // Função para ordenar transações
+    function sortTransactions(field) {
+        if (currentSort.field === field) {
+            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.field = field;
+            currentSort.order = 'asc';
+        }
+        seeMoreExpanded = false;
+        updateTransactionsAJAX(SELECTED_CARD, SELECTED_MONTH);
+    }
+    
     // Função para expandir transações
     function expandTransactions() {
         if (cachedTransactions.length > 0) {
+            seeMoreExpanded = true;
             renderTransactionsTable(cachedTransactions, false);
         }
     }
@@ -353,6 +381,10 @@
         const monthSelector = document.getElementById('monthSelector');
         if (cardSelector) cardSelector.value = '';
         if (monthSelector) monthSelector.value = '';
+        
+        currentSort = { field: 'date', order: 'desc' };
+        seeMoreExpanded = false;
+        
         updateDashboardFilters();
     }
 
