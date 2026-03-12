@@ -5,6 +5,8 @@ from django.http import JsonResponse
 from django.db.models import Count, Sum, Q
 from django.db.models.functions import TruncMonth
 from django.db import IntegrityError
+from datetime import date
+import calendar
 from .models import Invoice, Transaction, Category, CategoryRule, CreditCard, Income
 from .forms import CSVUploadForm, CategoryForm, CategoryRuleForm, CreditCardForm, IncomeForm
 from .utils import (
@@ -51,10 +53,15 @@ def dashboard(request):
         .first()
     )
     
+    # Data de corte para previsões: último dia do mês da última fatura
+    from datetime import date
+    import calendar
+    
     if last_invoice:
-        last_invoice_month = (last_invoice.year, last_invoice.month)
+        last_day = calendar.monthrange(last_invoice.year, last_invoice.month)[1]
+        prediction_cutoff_date = date(last_invoice.year, last_invoice.month, last_day)
     else:
-        last_invoice_month = None
+        prediction_cutoff_date = None
 
     # Agrupar transações com base na última fatura uploadada
     from collections import defaultdict
@@ -72,15 +79,12 @@ def dashboard(request):
             else:
                 trans_month = (trans.date.year, trans.date.month)
         else:
-            # Transações PREVISTAS: incluir apenas se:
-            # 1. A invoice for a última fatura uploadada
-            # 2. O mês da data for diferente do mês da última fatura (evitar duplicar janeiro)
-            if last_invoice_month and trans.invoice:
-                invoice_month = (trans.invoice.year or 0, trans.invoice.month or 0)
-                if invoice_month == last_invoice_month:
-                    date_month = (trans.date.year, trans.date.month)
-                    if date_month != last_invoice_month:
-                        trans_month = date_month
+            # Transações PREVISTAS: incluir apenas se forem posteriores à última fatura real
+            if prediction_cutoff_date and trans.date > prediction_cutoff_date:
+                trans_month = (trans.date.year, trans.date.month)
+            elif not prediction_cutoff_date:
+                # Se não há faturas reais, mostra todas as previsões (ex: entradas manuais futuras)
+                trans_month = (trans.date.year, trans.date.month)
         
         if trans_month:
             monthly_data[trans_month]['transactions'] += 1
@@ -226,17 +230,18 @@ def upload_invoice(request):
 
                 extension = csv_file.name.lower().split('.')[-1]
                 if extension == 'pdf':
-                    created, predicted = process_inter_pdf(csv_file, invoice)
+                    created, predicted = process_inter_pdf(
+                        csv_file, invoice, 
+                        target_month=target_month, 
+                        target_year=target_year
+                    )
                 else:
-                    created, predicted = process_nubank_csv(csv_file, invoice)
+                    created, predicted = process_nubank_csv(
+                        csv_file, invoice,
+                        target_month=target_month,
+                        target_year=target_year
+                    )
                 
-                # Atualizar mês de referência da fatura (se confirmado pelo usuário no modal)
-                # Não alteramos as datas reais das transações - apenas o mês de referência
-                if target_month and target_year:
-                    invoice.month = target_month
-                    invoice.year = target_year
-                    invoice.save()
-
                 msg = f'✅ Fatura processada! {created} transações importadas.'
                 if predicted > 0:
                     msg += f' 🔮 {predicted} parcelas futuras geradas.'
@@ -301,11 +306,23 @@ def invoice_update(request, pk):
             )
 
             try:
+                # Obter período confirmado pelo usuário (sobreposição)
+                target_month = form.cleaned_data.get('target_month')
+                target_year = form.cleaned_data.get('target_year')
+
                 extension = csv_file.name.lower().split('.')[-1]
                 if extension == 'pdf':
-                    created, predicted = process_inter_pdf(csv_file, new_invoice)
+                    created, predicted = process_inter_pdf(
+                        csv_file, new_invoice,
+                        target_month=target_month,
+                        target_year=target_year
+                    )
                 else:
-                    created, predicted = process_nubank_csv(csv_file, new_invoice)
+                    created, predicted = process_nubank_csv(
+                        csv_file, new_invoice,
+                        target_month=target_month,
+                        target_year=target_year
+                    )
                 
                 # Sucesso: deletar a antiga e mostrar mensagem
                 old_name = old_invoice.period_display
@@ -458,10 +475,43 @@ def get_chart_data(request):
         Q(is_predicted=False, invoice__year=target_year, invoice__month=target_month) |
         Q(is_predicted=True, date__year=target_year, date__month=target_month)
     )
+
+    # Encontrar a última fatura uploadada para filtrar previstas corretamente
+    last_invoice = (
+        Invoice.objects.filter(user=request.user)
+        .exclude(year__isnull=True, month__isnull=True)
+        .order_by('-year', '-month')
+        .first()
+    )
+    
+    import calendar
+    if last_invoice:
+        last_day = calendar.monthrange(last_invoice.year, last_invoice.month)[1]
+        prediction_cutoff_date = date(last_invoice.year, last_invoice.month, last_day)
+    else:
+        prediction_cutoff_date = None
+
+    # Se houver data de corte, as previstas do mês só aparecem se forem posteriores a ela
+    if prediction_cutoff_date:
+        category_transactions = category_transactions.exclude(
+            is_predicted=True,
+            date__lte=prediction_cutoff_date
+        )
+
     category = get_category_data(category_transactions)
 
-    # Temporal sempre mostra todos os dados (global)
-    temporal = get_temporal_data(transactions)
+    # Filtrar transações para o gráfico temporal:
+    # - Reais: todas
+    # - Previstas: apenas após a última fatura
+    if prediction_cutoff_date:
+        temporal_transactions = transactions.filter(
+            Q(is_predicted=False) |
+            Q(is_predicted=True, date__gt=prediction_cutoff_date)
+        )
+    else:
+        temporal_transactions = transactions.filter(is_predicted=False)
+
+    temporal = get_temporal_data(temporal_transactions)
     
     result = {'category': category, 'temporal': temporal, 'filtered': bool(selected_month)}
 
@@ -505,6 +555,26 @@ def get_stats_data(request):
         Q(is_predicted=False, invoice__year=target_year, invoice__month=target_month) |
         Q(is_predicted=True, date__year=target_year, date__month=target_month)
     )
+
+    # Encontrar a última fatura uploadada para filtrar previstas corretamente
+    last_invoice = (
+        Invoice.objects.filter(user=request.user)
+        .exclude(year__isnull=True, month__isnull=True)
+        .order_by('-year', '-month')
+        .first()
+    )
+    
+    import calendar
+    if last_invoice:
+        last_day = calendar.monthrange(last_invoice.year, last_invoice.month)[1]
+        prediction_cutoff_date = date(last_invoice.year, last_invoice.month, last_day)
+        
+        # Excluir previstas do mês que são anteriores ou iguais ao corte
+        target_month_transactions = target_month_transactions.exclude(
+            is_predicted=True,
+            date__lte=prediction_cutoff_date
+        )
+
     target_month_amount = target_month_transactions.aggregate(Sum('amount'))['amount__sum'] or 0
     target_month_count = target_month_transactions.count()
     
@@ -562,6 +632,25 @@ def get_transactions_data(request):
             )
         except (ValueError, IndexError):
             pass
+
+    # Encontrar a última fatura uploadada para filtrar previstas corretamente
+    last_invoice = (
+        Invoice.objects.filter(user=request.user)
+        .exclude(year__isnull=True, month__isnull=True)
+        .order_by('-year', '-month')
+        .first()
+    )
+    
+    import calendar
+    if last_invoice:
+        last_day = calendar.monthrange(last_invoice.year, last_invoice.month)[1]
+        prediction_cutoff_date = date(last_invoice.year, last_invoice.month, last_day)
+        
+        # Excluir previstas da lista que são anteriores ou iguais ao corte
+        transactions = transactions.exclude(
+            is_predicted=True,
+            date__lte=prediction_cutoff_date
+        )
 
     sort_field = request.GET.get('sort', 'date')
     sort_order = request.GET.get('order', 'desc')

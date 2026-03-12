@@ -47,7 +47,7 @@ def create_transaction_deduplicated(invoice, date, description, amount, is_predi
     )
 
 
-def process_inter_pdf(pdf_file, invoice):
+def process_inter_pdf(pdf_file, invoice, target_month=None, target_year=None):
     """
     Processa um arquivo PDF do Banco Inter e cria transações.
     """
@@ -84,20 +84,18 @@ def process_inter_pdf(pdf_file, invoice):
             # Fallback para hoje caso não encontre
             due_date = datetime.now().date()
 
-        # Configurar ano/mês da fatura baseado no vencimento
-        invoice.year = due_date.year
-        invoice.month = due_date.month
+        # Configurar ano/mês da fatura baseado no alvo (preferencial) ou no vencimento
+        invoice.year = target_year or due_date.year
+        invoice.month = target_month or due_date.month
         invoice.save()
 
         # LIMPEZA ESTRATÉGICA: Ao subir uma fatura REAL, removemos TODAS as previsões
         # deste cartão para este mês e meses futuros. O arquivo atual será a nova fonte da verdade.
         Transaction.objects.filter(
             invoice__credit_card=invoice.credit_card,
-            date__year__gte=invoice.year,
             is_predicted=True
         ).filter(
-            # Garante que só apague meses futuros do mesmo ano ou qualquer mês de anos futuros
-            models.Q(date__year__gt=invoice.year) | models.Q(date__month__gte=invoice.month)
+            models.Q(date__year__gt=invoice.year) | models.Q(date__year=invoice.year, date__month__gte=invoice.month)
         ).delete()
 
         for page in pdf.pages:
@@ -115,13 +113,24 @@ def process_inter_pdf(pdf_file, invoice):
             for line in all_rows:
                 match = inter_regex.search(line)
                 if match:
-                    _, month_abbr, description, value_str = match.groups()
+                    date_str, month_abbr, description, value_str = match.groups()
                     if '+' in value_str: continue
 
                     try:
-                        # Para o Banco Inter, a data da transação na fatura é informativa.
-                        # Todos os gastos de uma fatura "pertencem" financeiramente ao mês de vencimento dela.
-                        date_val = due_date 
+                        # Tentar converter a data da linha (ex: 15 de jan. 2026)
+                        try:
+                            clean_date_str = date_str.replace(' de ', ' ').replace('.', '')
+                            # Substituir mês abreviado pelo número para o strptime
+                            month_num = months_pt.get(month_abbr.lower()[:3])
+                            if month_num:
+                                # Reconstruir string para formato fixo
+                                day = clean_date_str.split(' ')[0]
+                                year = clean_date_str.split(' ')[2]
+                                date_val = datetime.strptime(f"{day}/{month_num}/{year}", "%d/%m/%Y").date()
+                            else:
+                                date_val = due_date
+                        except:
+                            date_val = due_date
 
                         # Limpar valor
                         clean_value = value_str.replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
@@ -146,7 +155,7 @@ def process_inter_pdf(pdf_file, invoice):
                             if 0 < current_installment < total_installments:
                                 remaining = total_installments - current_installment
                                 for i in range(1, remaining + 1):
-                                    next_date = due_date + relativedelta(months=i)
+                                    next_date = date_val + relativedelta(months=i)
                                     next_desc = description.replace(
                                         f'Parcela {current_installment:02d} de {total_installments:02d}',
                                         f'Parcela {current_installment + i:02d} de {total_installments:02d}'
@@ -167,7 +176,7 @@ def process_inter_pdf(pdf_file, invoice):
     return transactions_created, predictions_created
 
 
-def process_nubank_csv(csv_file, invoice):
+def process_nubank_csv(csv_file, invoice, target_month=None, target_year=None):
     """
     Processa um arquivo CSV do Nubank e cria transações.
     Detecta parcelamentos e cria previsões futuras.
@@ -211,22 +220,26 @@ def process_nubank_csv(csv_file, invoice):
                         break
                 except: pass
 
-    # Determinar ano/mês predominante
-    if dates_found:
+    # Determinar ano/mês predominante (se não for passado manualmente)
+    if target_month and target_year:
+        invoice.year = target_year
+        invoice.month = target_month
+    elif dates_found:
         month_counter = Counter((d.year, d.month) for d in dates_found)
         most_common = month_counter.most_common(1)[0][0]
         invoice.year = most_common[0]
         invoice.month = most_common[1]
-        invoice.save()
+    
+    invoice.save()
 
-        # LIMPEZA ESTRATÉGICA: Remover previsões deste cartão para este mês e meses futuros
-        from .models import Transaction
-        Transaction.objects.filter(
-            invoice__credit_card=invoice.credit_card,
-            is_predicted=True
-        ).filter(
-            models.Q(date__year__gt=invoice.year) | models.Q(date__year=invoice.year, date__month__gte=invoice.month)
-        ).delete()
+    # LIMPEZA ESTRATÉGICA: Remover previsões deste cartão para este mês e meses futuros
+    from .models import Transaction
+    Transaction.objects.filter(
+        invoice__credit_card=invoice.credit_card,
+        is_predicted=True
+    ).filter(
+        models.Q(date__year__gt=invoice.year) | models.Q(date__year=invoice.year, date__month__gte=invoice.month)
+    ).delete()
 
     transactions_created = 0
     predictions_created = 0
@@ -353,16 +366,6 @@ def process_nubank_csv(csv_file, invoice):
                 is_predicted=False
             )
             transactions_created += 1
-
-    return transactions_created, predictions_created
-
-    # Determinar ano/mês predominante da fatura
-    if dates_found:
-        month_counter = Counter((d.year, d.month) for d in dates_found)
-        most_common = month_counter.most_common(1)[0][0]
-        invoice.year = most_common[0]
-        invoice.month = most_common[1]
-        invoice.save()
 
     return transactions_created, predictions_created
 
