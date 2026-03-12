@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Q
 from django.db.models.functions import TruncMonth
 from django.db import IntegrityError
 from .models import Invoice, Transaction, Category, CategoryRule, CreditCard, Income
@@ -43,48 +43,66 @@ def dashboard(request):
     today = date.today()
     current_month_key = f"{today.year}-{today.month:02d}"
 
-    monthly_summary = (
-        all_transactions
-        .annotate(month=TruncMonth('date'))
-        .values('month')
-        .annotate(
-            total_transactions=Count('id'),
-            total_amount=Sum('amount')
-        )
-        .order_by('month')
+    # Encontrar a última fatura uploadada (maior ano/mês)
+    last_invoice = (
+        Invoice.objects.filter(user=request.user)
+        .exclude(year__isnull=True, month__isnull=True)
+        .order_by('-year', '-month')
+        .first()
     )
+    
+    if last_invoice:
+        last_invoice_month = (last_invoice.year, last_invoice.month)
+    else:
+        last_invoice_month = None
 
-    # Formatar resumo mensal com nomes legíveis
+    # Agrupar transações com base na última fatura uploadada
+    from collections import defaultdict
+    monthly_data = defaultdict(lambda: {'transactions': 0, 'amount': 0})
+    
+    all_transactions_with_invoice = all_transactions.select_related('invoice')
+    
+    for trans in all_transactions_with_invoice:
+        trans_month = None
+        
+        # Sempre incluir transações REAIS no mês de referência da fatura
+        if not trans.is_predicted:
+            if trans.invoice and trans.invoice.year and trans.invoice.month:
+                trans_month = (trans.invoice.year, trans.invoice.month)
+            else:
+                trans_month = (trans.date.year, trans.date.month)
+        else:
+            # Transações PREVISTAS: incluir apenas se:
+            # 1. A invoice for a última fatura uploadada
+            # 2. O mês da data for diferente do mês da última fatura (evitar duplicar janeiro)
+            if last_invoice_month and trans.invoice:
+                invoice_month = (trans.invoice.year or 0, trans.invoice.month or 0)
+                if invoice_month == last_invoice_month:
+                    date_month = (trans.date.year, trans.date.month)
+                    if date_month != last_invoice_month:
+                        trans_month = date_month
+        
+        if trans_month:
+            monthly_data[trans_month]['transactions'] += 1
+            monthly_data[trans_month]['amount'] += float(trans.amount) if trans.amount else 0
+
+    # Ordenar e formatar
+    sorted_months = sorted(monthly_data.keys())
     monthly_list = []
-    for item in monthly_summary:
-        m = item['month']
-        month_key = f"{m.year}-{m.month:02d}"
+    for year, month in sorted_months:
+        month_key = f"{year}-{month:02d}"
         monthly_list.append({
             'key': month_key,
-            'label': f"{MONTH_NAMES.get(m.month, '?')}/{m.year}",
-            'year': m.year,
-            'month': m.month,
-            'total_transactions': item['total_transactions'],
-            'total_amount': item['total_amount'] or 0,
+            'label': f"{MONTH_NAMES.get(month, '?')}/{year}",
+            'year': year,
+            'month': month,
+            'total_transactions': monthly_data[(year, month)]['transactions'],
+            'total_amount': monthly_data[(year, month)]['amount'],
             'is_current': month_key == current_month_key,
         })
 
-    # Todos os meses disponíveis para o dropdown (sem filtro de data)
-    all_months_qs = (
-        all_transactions
-        .annotate(month=TruncMonth('date'))
-        .values('month')
-        .annotate(count=Count('id'))
-        .order_by('month')
-    )
-    all_months = []
-    for item in all_months_qs:
-        m = item['month']
-        month_key = f"{m.year}-{m.month:02d}"
-        all_months.append({
-            'key': month_key,
-            'label': f"{MONTH_NAMES.get(m.month, '?')}/{m.year}",
-        })
+    # Todos os meses disponíveis para o dropdown (usando dados já calculados)
+    all_months = [{'key': m['key'], 'label': m['label']} for m in monthly_list]
 
     # Verificar se há filtro de mês ativo
     selected_month = request.GET.get('month')  # formato: "2026-01"
@@ -95,7 +113,11 @@ def dashboard(request):
             parts = selected_month.split('-')
             filter_year = int(parts[0])
             filter_month = int(parts[1])
-            transactions = all_transactions.filter(date__year=filter_year, date__month=filter_month)
+            # Filtro híbrido: reais usam invoice.month/year, previstos usam date
+            transactions = all_transactions.filter(
+                Q(is_predicted=False, invoice__year=filter_year, invoice__month=filter_month) |
+                Q(is_predicted=True, date__year=filter_year, date__month=filter_month)
+            )
             filtered = True
             selected_label = f"{MONTH_NAMES.get(filter_month, '?')}/{filter_year}"
         except (ValueError, IndexError):
@@ -109,10 +131,10 @@ def dashboard(request):
     total_amount = transactions.aggregate(Sum('amount'))['amount__sum'] or 0
     total_transactions = transactions.count()
     
-    # Estatísticas do mês atual (para KPIs fixos)
+    # Estatísticas do mês atual (para KPIs fixos) - filtro híbrido
     current_month_transactions = all_transactions.filter(
-        date__year=today.year, 
-        date__month=today.month
+        Q(is_predicted=False, invoice__year=today.year, invoice__month=today.month) |
+        Q(is_predicted=True, date__year=today.year, date__month=today.month)
     )
     current_month_amount = current_month_transactions.aggregate(Sum('amount'))['amount__sum'] or 0
     current_month_count = current_month_transactions.count()
@@ -208,24 +230,12 @@ def upload_invoice(request):
                 else:
                     created, predicted = process_nubank_csv(csv_file, invoice)
                 
-                # Aplicar sobreposição de período se o usuário confirmou no modal
+                # Atualizar mês de referência da fatura (se confirmado pelo usuário no modal)
+                # Não alteramos as datas reais das transações - apenas o mês de referência
                 if target_month and target_year:
-                    orig_month = invoice.month
-                    orig_year = invoice.year
-                    
                     invoice.month = target_month
                     invoice.year = target_year
                     invoice.save()
-                    
-                    # Calcular o deslocamento de meses entre o detectado e o confirmado
-                    from dateutil.relativedelta import relativedelta
-                    delta_months = (int(target_year) - int(orig_year)) * 12 + (int(target_month) - int(orig_month))
-                    
-                    if delta_months != 0:
-                        # Deslocar TODAS as transações (reais e previstas) proporcionalmente
-                        for trans in invoice.transactions.all():
-                            trans.date = trans.date + relativedelta(months=delta_months)
-                            trans.save()
 
                 msg = f'✅ Fatura processada! {created} transações importadas.'
                 if predicted > 0:
@@ -443,8 +453,11 @@ def get_chart_data(request):
             target_year = today.year
             target_month = today.month
 
-    # Categorias filtradas pelo mês (atual ou selecionado)
-    category_transactions = transactions.filter(date__year=target_year, date__month=target_month)
+    # Categorias filtradas pelo mês (atual ou selecionado) - filtro híbrido
+    category_transactions = transactions.filter(
+        Q(is_predicted=False, invoice__year=target_year, invoice__month=target_month) |
+        Q(is_predicted=True, date__year=target_year, date__month=target_month)
+    )
     category = get_category_data(category_transactions)
 
     # Temporal sempre mostra todos os dados (global)
@@ -487,10 +500,10 @@ def get_stats_data(request):
         target_year = today.year
         target_month = today.month
     
-    # KPIs do mês alvo (filtrado ou atual)
+    # KPIs do mês alvo (filtrado ou atual) - filtro híbrido
     target_month_transactions = all_transactions.filter(
-        date__year=target_year, 
-        date__month=target_month
+        Q(is_predicted=False, invoice__year=target_year, invoice__month=target_month) |
+        Q(is_predicted=True, date__year=target_year, date__month=target_month)
     )
     target_month_amount = target_month_transactions.aggregate(Sum('amount'))['amount__sum'] or 0
     target_month_count = target_month_transactions.count()
@@ -542,7 +555,11 @@ def get_transactions_data(request):
             parts = selected_month.split('-')
             filter_year = int(parts[0])
             filter_month = int(parts[1])
-            transactions = transactions.filter(date__year=filter_year, date__month=filter_month)
+            # Filtro híbrido: reais usam invoice.month/year, previstos usam date
+            transactions = transactions.filter(
+                Q(is_predicted=False, invoice__year=filter_year, invoice__month=filter_month) |
+                Q(is_predicted=True, date__year=filter_year, date__month=filter_month)
+            )
         except (ValueError, IndexError):
             pass
 

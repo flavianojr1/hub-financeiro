@@ -399,16 +399,12 @@ def recategorize_user_transactions(user):
 
 
 def get_temporal_data(transactions=None):
-    """Agrupa transações por mês e por cartão para gráfico temporal empilhado"""
+    """Agrupa transações por mês de referência da fatura e por cartão para gráfico temporal empilhado"""
     from django.db.models import Sum
-    from django.db.models.functions import TruncMonth
     from collections import defaultdict
 
     if transactions is None:
         transactions = Transaction.objects.all()
-
-    # Listar todos os meses que aparecem nos dados em ordem crescente
-    months_qs = transactions.annotate(month=TruncMonth('date')).values('month').distinct().order_by('month')
 
     MONTH_ABBR = {
         1: 'jan', 2: 'fev', 3: 'mar', 4: 'abr',
@@ -416,49 +412,55 @@ def get_temporal_data(transactions=None):
         9: 'set', 10: 'out', 11: 'nov', 12: 'dez'
     }
 
-    labels = []
-    month_keys = []
-    for item in months_qs:
-        m = item['month']
-        if m:
-            month_str = f"{MONTH_ABBR.get(m.month, '?')}/{m.year}"
-            labels.append(month_str)
-            month_keys.append(m)
+    # Buscar transações com dados da invoice (select_related para evitar N+1)
+    transactions = transactions.select_related('invoice__credit_card')
 
-    # Agrupar por cartão e mês
-    grouped_data = transactions.annotate(
-        month=TruncMonth('date')
-    ).values('month', 'invoice__credit_card__name', 'invoice__credit_card__color').annotate(
-        total=Sum('amount')
-    )
+    # Calcular display_month em Python: 
+    # - Para previstos: usa date.month/year
+    # - Para reais: usa invoice.month/year (mês de referência da fatura)
+    month_data = defaultdict(lambda: defaultdict(float))
+    cards_info = defaultdict(lambda: {'color': '#667eea'})
+    month_keys_set = set()
 
-    # Montar mapeamento de dados (card -> array de totais por mês)
-    cards_info = defaultdict(lambda: {'data': [0]*len(labels), 'color': '#667eea'})
+    for trans in transactions:
+        if trans.is_predicted:
+            # Previsto: usa a data real da parcela
+            display_year = trans.date.year
+            display_month = trans.date.month
+        else:
+            # Real: usa o mês de referência da fatura
+            if trans.invoice:
+                display_year = trans.invoice.year or trans.date.year
+                display_month = trans.invoice.month or trans.date.month
+            else:
+                display_year = trans.date.year
+                display_month = trans.date.month
 
-    for item in grouped_data:
-        m = item['month']
-        if not m: continue
-        
-        card_name = item['invoice__credit_card__name'] or 'Sem Cartão'
-        card_color = item['invoice__credit_card__color'] or '#9ca3af'
-        
-        try:
-            m_index = month_keys.index(m)
-            cards_info[card_name]['data'][m_index] = float(item['total'])
-            cards_info[card_name]['color'] = card_color
-        except ValueError:
-            pass
+        month_key = (display_year, display_month)
+        month_keys_set.add(month_key)
 
+        card_name = trans.invoice.credit_card.name if trans.invoice and trans.invoice.credit_card else 'Sem Cartão'
+        card_color = trans.invoice.credit_card.color if trans.invoice and trans.invoice.credit_card else '#9ca3af'
+
+        month_data[month_key][card_name] += float(trans.amount)
+        cards_info[card_name] = {'color': card_color}
+
+    # Ordenar meses
+    month_keys = sorted(month_keys_set)
+    labels = [f"{MONTH_ABBR.get(m[1], '?')}/{m[0]}" for m in month_keys]
+
+    # Montar datasets
     datasets = []
-    for name, info in cards_info.items():
-        total = sum(info['data'])
+    for card_name, info in cards_info.items():
+        data = [month_data[m].get(card_name, 0) for m in month_keys]
+        total = sum(data)
         datasets.append({
-            'label': name,
-            'data': info['data'],
+            'label': card_name,
+            'data': data,
             'color': info['color'],
             'total': total
         })
-    
+
     datasets.sort(key=lambda x: x['total'])
 
     return {
