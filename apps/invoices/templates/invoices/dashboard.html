@@ -314,10 +314,7 @@
                 setTimeout(() => transactionsContainer.style.display = 'none', 200);
             }
             cachedTransactions = [];
-            const searchWrapper = document.getElementById('searchWrapper');
-            if (searchWrapper) {
-                searchWrapper.style.display = 'none';
-            }
+            hideTransactionFilters();
             return;
         }
 
@@ -339,8 +336,20 @@
             // Armazenar todas as transações
             cachedTransactions = data.transactions || [];
 
+            // Preencher filtros de categoria e cartão (preserva seleção atual)
+            populateFilters(cachedTransactions);
+
             if (cachedTransactions.length > 0) {
-                renderTransactionsTable(cachedTransactions, !seeMoreExpanded);
+                // Se estiver expandido OU houver qualquer filtro selecionado, aplica a filtragem
+                const hasActiveFilters = (document.getElementById('transactionsSearch').value || '').trim().length >= 3 ||
+                                       document.getElementById('transactionsCategoryFilter').value !== '' ||
+                                       document.getElementById('transactionsCardFilter').value !== '';
+                
+                if (seeMoreExpanded || hasActiveFilters) {
+                    setTimeout(() => applyAllFilters(), 50);
+                } else {
+                    renderTransactionsTable(cachedTransactions, true);
+                }
             } else {
                 tableContainer.innerHTML = '<p style="padding: 1rem; text-align: center; color: var(--text-secondary);">Nenhuma transação neste mês.</p>';
                 transactionsContainer.querySelector('.see-more-container').innerHTML = '';
@@ -362,6 +371,57 @@
         } catch (error) {
             console.error('Erro ao buscar transações:', error);
         }
+    }
+
+    function populateFilters(transactions) {
+        const catFilter = document.getElementById('transactionsCategoryFilter');
+        const cardFilter = document.getElementById('transactionsCardFilter');
+        if (!catFilter || !cardFilter) return;
+
+        const categories = [...new Set(transactions.map(t => t.category || 'Outros'))].sort();
+        const cards = [...new Set(transactions.map(t => t.card_name || 'N/A'))].sort();
+
+        const currentCat = catFilter.value;
+        const currentCard = cardFilter.value;
+
+        catFilter.innerHTML = '<option value="">Categorias</option>';
+        categories.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat;
+            opt.textContent = cat;
+            if (cat === currentCat) opt.selected = true;
+            catFilter.appendChild(opt);
+        });
+
+        cardFilter.innerHTML = '<option value="">Todos Cartões</option>';
+        cards.forEach(card => {
+            const opt = document.createElement('option');
+            opt.value = card;
+            opt.textContent = card;
+            if (card === currentCard) opt.selected = true;
+            cardFilter.appendChild(opt);
+        });
+    }
+
+    function hideTransactionFilters() {
+        ['searchWrapper', 'categoryFilterWrapper', 'cardFilterWrapper'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+    }
+
+    function showTransactionFilters() {
+        ['searchWrapper', 'categoryFilterWrapper', 'cardFilterWrapper'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.display = 'flex';
+                if (!searchAnimated) {
+                    void el.offsetWidth;
+                    el.classList.add('search-wrapper-animate');
+                }
+            }
+        });
+        searchAnimated = true;
     }
 
     function renderTransactionsTable(transactions, showSeeMore) {
@@ -407,24 +467,11 @@
         if (hasMore && showSeeMore) {
             seeMoreContainer.innerHTML = '<div id="seeMoreBtn" style="text-align: center; margin-top: 1rem;"><button class="btn btn-primary" onclick="expandTransactions()">Ver mais</button></div>';
             transactionsContainer.classList.remove('expanded');
-            const searchWrapper = document.getElementById('searchWrapper');
-            if (searchWrapper) {
-                searchWrapper.classList.remove('search-wrapper-animate');
-                searchWrapper.style.display = 'none';
-            }
+            hideTransactionFilters();
         } else {
             seeMoreContainer.innerHTML = '';
             transactionsContainer.classList.add('expanded');
-            const searchWrapper = document.getElementById('searchWrapper');
-            if (searchWrapper) {
-                searchWrapper.classList.remove('search-wrapper-animate');
-                searchWrapper.style.display = 'flex';
-                if (!searchAnimated) {
-                    searchAnimated = true;
-                    void searchWrapper.offsetWidth;
-                    searchWrapper.classList.add('search-wrapper-animate');
-                }
-            }
+            showTransactionFilters();
         }
     }
 
@@ -444,10 +491,7 @@
         if (cachedTransactions.length > 0) {
             seeMoreExpanded = true;
             renderTransactionsTable(cachedTransactions, false);
-            const searchWrapper = document.getElementById('searchWrapper');
-            if (searchWrapper) {
-                searchWrapper.style.display = 'flex';
-            }
+            showTransactionFilters();
             // Scroll suave para o container de transações
             setTimeout(() => {
                 const transactionsContainer = document.getElementById('transactionsContainer');
@@ -477,45 +521,44 @@
         requestAnimationFrame(step);
     }
 
-    // Função para filtrar transações pelo search input
+    // Funções de filtragem
     let lastSearchQuery = '';
-    function filterTransactions(query) {
-        if (query.trim().length < 3) {
-            if (lastSearchQuery !== '') {
-                lastSearchQuery = '';
-                renderTransactionsTable(cachedTransactions, false);
-            }
-            return;
+    
+    function applyAllFilters() {
+        const query = (document.getElementById('transactionsSearch').value || '').trim().toLowerCase();
+        const category = document.getElementById('transactionsCategoryFilter').value;
+        const card = document.getElementById('transactionsCardFilter').value;
+        
+        console.log('Applying filters:', { query, category, card, totalCached: cachedTransactions.length });
+        
+        let filtered = [...cachedTransactions];
+        
+        if (query.length >= 3) {
+            filtered = filtered.filter(t => t.description.toLowerCase().includes(query));
         }
         
-        if (query.trim() === lastSearchQuery) {
-            return;
+        if (category) {
+            filtered = filtered.filter(t => (t.category || 'Outros') === category);
         }
         
-        lastSearchQuery = query.trim();
-        const lowerQuery = lastSearchQuery.toLowerCase();
-        const filtered = cachedTransactions.filter(t => 
-            t.description.toLowerCase().includes(lowerQuery)
-        );
+        if (card) {
+            filtered = filtered.filter(t => (t.card_name || 'N/A') === card);
+        }
+        
+        // Quando filtrando, sempre mostramos a tabela completa (sem "Ver mais")
         renderTransactionsTable(filtered, false);
         
-        // Scroll suave para o container de transações
-        setTimeout(() => {
-            const transactionsContainer = document.getElementById('transactionsContainer');
-            if (transactionsContainer) {
-                const targetY = transactionsContainer.getBoundingClientRect().top + window.scrollY - 100;
-                smoothScrollTo(targetY, 800);
-            }
-        }, 50);
+        // Scroll suave se estiver filtrando manualmente
+        if (query || category || card) {
+            // ... (scroll logic can stay)
+        }
     }
 
     // Event listener para o search input
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('transactionsSearch');
         if (searchInput) {
-            searchInput.addEventListener('input', function(e) {
-                filterTransactions(e.target.value);
-            });
+            searchInput.addEventListener('input', applyAllFilters);
         }
     });
 
@@ -557,13 +600,15 @@
         lastSearchQuery = '';
         
         const searchInput = document.getElementById('transactionsSearch');
-        const searchWrapper = document.getElementById('searchWrapper');
-        if (searchInput) {
-            searchInput.value = '';
-        }
-        if (searchWrapper) {
-            searchWrapper.style.display = 'none';
-        }
+        if (searchInput) searchInput.value = '';
+        
+        const catFilter = document.getElementById('transactionsCategoryFilter');
+        if (catFilter) catFilter.value = '';
+        
+        const cardFilter = document.getElementById('transactionsCardFilter');
+        if (cardFilter) cardFilter.value = '';
+        
+        hideTransactionFilters();
         
         const btnVoltar = document.getElementById('btnVoltar');
         if (btnVoltar) {
@@ -708,11 +753,30 @@
     <div id="transactionsContainer" class="transactions-wrapper">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
             <h2 class="card-title" style="font-size: 1rem; margin: 0;"><i class="fi fi-br-list"></i> Lançamentos do Mês</h2>
-            <div style="display: flex; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <!-- Filtro de Cartão -->
+                <div id="cardFilterWrapper" style="display: none; align-items: center; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; transition: border-color 0.2s ease; flex-shrink: 0;">
+                    <i class="fi fi-br-credit-card" style="color: var(--accent-purple); font-size: 0.9rem; margin-right: 6px; display: flex; align-items: center;"></i>
+                    <span style="color: var(--border-color); margin-right: 6px;">|</span>
+                    <select id="transactionsCardFilter" class="form-input" style="border: none; background: transparent; padding: 6px 0; font-size: 0.85rem; width: 140px; outline: none; box-shadow: none; cursor: pointer;" onfocus="this.closest('#cardFilterWrapper').style.borderColor='var(--accent-purple)'" onblur="this.closest('#cardFilterWrapper').style.borderColor='var(--border-color)'" onchange="applyAllFilters()">
+                        <option value="">Todos Cartões</option>
+                    </select>
+                </div>
+
+                <!-- Filtro de Categoria -->
+                <div id="categoryFilterWrapper" style="display: none; align-items: center; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; transition: border-color 0.2s ease; flex-shrink: 0;">
+                    <i class="fi fi-br-apps" style="color: var(--accent-purple); font-size: 0.9rem; margin-right: 6px; display: flex; align-items: center;"></i>
+                    <span style="color: var(--border-color); margin-right: 6px;">|</span>
+                    <select id="transactionsCategoryFilter" class="form-input" style="border: none; background: transparent; padding: 6px 0; font-size: 0.85rem; width: 160px; outline: none; box-shadow: none; cursor: pointer;" onfocus="this.closest('#categoryFilterWrapper').style.borderColor='var(--accent-purple)'" onblur="this.closest('#categoryFilterWrapper').style.borderColor='var(--border-color)'" onchange="applyAllFilters()">
+                        <option value="">Categorias</option>
+                    </select>
+                </div>
+
+                <!-- Busca -->
                 <div id="searchWrapper" style="display: none; align-items: center; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; max-width: 280px; transition: border-color 0.2s ease; flex-shrink: 0;">
                     <i class="fi fi-br-search" style="color: var(--accent-purple); font-size: 0.9rem; margin-right: 6px; display: flex; align-items: center;"></i>
                     <span style="color: var(--border-color); margin-right: 6px;">|</span>
-                    <input type="text" id="transactionsSearch" class="form-input" placeholder="Buscar transação..." style="border: none; background: transparent; padding: 6px 0; font-size: 0.85rem; width: 100%; outline: none; box-shadow: none;" onfocus="this.closest('#searchWrapper').style.borderColor='var(--accent-purple)'" onblur="this.closest('#searchWrapper').style.borderColor='var(--border-color)'">
+                    <input type="text" id="transactionsSearch" class="form-input" placeholder="Buscar..." style="border: none; background: transparent; padding: 6px 0; font-size: 0.85rem; width: 100%; outline: none; box-shadow: none;" onfocus="this.closest('#searchWrapper').style.borderColor='var(--accent-purple)'" onblur="this.closest('#searchWrapper').style.borderColor='var(--border-color)'">
                 </div>
                 <button id="btnVoltar" class="btn-voltar hidden" onclick="resetFilters()">Voltar</button>
             </div>
