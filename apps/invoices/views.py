@@ -655,17 +655,20 @@ def get_transactions_data(request):
     sort_field = request.GET.get('sort', 'date')
     sort_order = request.GET.get('order', 'desc')
     
-    valid_fields = {'date', 'description', 'category', 'amount'}
+    valid_fields = {'date', 'description', 'category', 'amount', 'card'}
     if sort_field not in valid_fields:
         sort_field = 'date'
     
+    # Mapear campo de ordenação 'card' para o relacionamento correto
+    db_sort_field = sort_field
+    if sort_field == 'card':
+        db_sort_field = 'invoice__credit_card__name'
+    
     order_prefix = '-' if sort_order == 'desc' else ''
-    transactions_list = transactions.order_by(f'{order_prefix}{sort_field}', 'description').values(
-        'date', 'description', 'amount', 'category'
-    )
+    transactions_list = transactions.select_related('invoice__credit_card').order_by(f'{order_prefix}{db_sort_field}', 'description')
     
     from apps.invoices.models import Category
-    category_names = set(t['category'] for t in transactions_list if t.get('category'))
+    category_names = set(t.category for t in transactions_list if t.category)
     category_colors = {}
     for cat_name in category_names:
         cat = Category.objects.filter(name=cat_name).first()
@@ -675,11 +678,13 @@ def get_transactions_data(request):
     result = {
         'transactions': [
             {
-                'date': t['date'].strftime('%d/%m') if t['date'] else '',
-                'description': t['description'] or '',
-                'amount': float(t['amount']) if t['amount'] else 0,
-                'category': t.get('category', 'Outros'),
-                'category_color': category_colors.get(t.get('category', 'Outros'), '#6b7280')
+                'date': t.date.strftime('%d/%m') if t.date else '',
+                'description': t.description or '',
+                'amount': float(t.amount) if t.amount else 0,
+                'category': t.category or 'Outros',
+                'category_color': category_colors.get(t.category or 'Outros', '#6b7280'),
+                'card_name': t.invoice.credit_card.name if t.invoice and t.invoice.credit_card else 'N/A',
+                'card_color': t.invoice.credit_card.color if t.invoice and t.invoice.credit_card else '#6b7280'
             }
             for t in transactions_list
         ]

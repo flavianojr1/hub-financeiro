@@ -380,15 +380,18 @@
         let html = '<table class="table"><thead><tr>';
         html += '<th style="font-size: 0.7rem; cursor: pointer;" onclick="sortTransactions(\'date\')">Data ' + getSortIcon('date') + '</th>';
         html += '<th style="font-size: 0.7rem; cursor: pointer;" onclick="sortTransactions(\'description\')">Descrição ' + getSortIcon('description') + '</th>';
+        html += '<th style="font-size: 0.7rem; cursor: pointer;" onclick="sortTransactions(\'card\')">Cartão ' + getSortIcon('card') + '</th>';
         html += '<th style="font-size: 0.7rem; cursor: pointer;" onclick="sortTransactions(\'category\')">Categoria ' + getSortIcon('category') + '</th>';
         html += '<th style="font-size: 0.7rem; cursor: pointer;" onclick="sortTransactions(\'amount\')">Valor ' + getSortIcon('amount') + '</th>';
         html += '</tr></thead><tbody>';
         
         toShow.forEach((t, index) => {
             const catColor = t.category_color || '#6b7280';
+            const cardColor = t.card_color || '#6b7280';
             const categoryBadge = '<span class="badge" style="background: ' + catColor + '1a; color: ' + catColor + '; border: 1px solid ' + catColor + '4d; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 500;">' + (t.category || 'Outros') + '</span>';
+            const cardBadge = '<span class="badge" style="background: ' + cardColor + '1a; color: ' + cardColor + '; border: 1px solid ' + cardColor + '4d; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 500;">' + (t.card_name || 'N/A') + '</span>';
             const delay = Math.min(index * 0.03, 0.5);
-            html += '<tr style="animation-delay: ' + delay + 's"><td style="font-size: 0.8rem;">' + t.date + '</td><td style="font-size: 0.8rem;">' + t.description + '</td><td style="font-size: 0.8rem;">' + categoryBadge + '</td><td style="font-size: 0.8rem;"><strong>R$ ' + t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong></td></tr>';
+            html += '<tr style="animation-delay: ' + delay + 's"><td style="font-size: 0.8rem;">' + t.date + '</td><td style="font-size: 0.8rem;">' + t.description + '</td><td style="font-size: 0.8rem;">' + cardBadge + '</td><td style="font-size: 0.8rem;">' + categoryBadge + '</td><td style="font-size: 0.8rem;"><strong>R$ ' + t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong></td></tr>';
         });
         html += '</tbody></table>';
         
