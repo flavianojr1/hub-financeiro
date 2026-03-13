@@ -86,6 +86,41 @@
         display: none;
     }
 
+    /* Estilo para o botão de limpar filtros (borracha) */
+    .btn-clear-filters {
+        width: 32px;
+        height: 32px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border-radius: 8px;
+        background: rgba(138, 5, 190, 0.1);
+        border: 1px solid rgba(138, 5, 190, 0.2);
+        color: #8A05BE;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        flex-shrink: 0;
+    }
+
+    .btn-clear-filters:hover {
+        background: rgba(138, 5, 190, 0.15);
+        border-color: rgba(138, 5, 190, 0.4);
+        box-shadow: 0 4px 12px rgba(138, 5, 190, 0.2);
+        transform: translateY(-1px);
+    }
+
+    .btn-clear-filters i {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+    }
+
+    .btn-clear-filters.spinning i {
+        animation: spin-once 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
     @keyframes slideInLeft {
         from {
             opacity: 0;
@@ -404,14 +439,14 @@
     }
 
     function hideTransactionFilters() {
-        ['searchWrapper', 'categoryFilterWrapper', 'cardFilterWrapper'].forEach(id => {
+        ['searchWrapper', 'categoryFilterWrapper', 'cardFilterWrapper', 'clearFiltersBtn'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
     }
 
     function showTransactionFilters() {
-        ['searchWrapper', 'categoryFilterWrapper', 'cardFilterWrapper'].forEach(id => {
+        ['searchWrapper', 'categoryFilterWrapper', 'cardFilterWrapper', 'clearFiltersBtn'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 el.style.display = 'flex';
@@ -422,6 +457,24 @@
             }
         });
         searchAnimated = true;
+    }
+
+    function clearTransactionFilters() {
+        const btn = document.getElementById('clearFiltersBtn');
+        if (btn) {
+            btn.classList.add('spinning');
+            setTimeout(() => btn.classList.remove('spinning'), 600);
+        }
+
+        const searchInput = document.getElementById('transactionsSearch');
+        const catFilter = document.getElementById('transactionsCategoryFilter');
+        const cardFilter = document.getElementById('transactionsCardFilter');
+        
+        if (searchInput) searchInput.value = '';
+        if (catFilter) catFilter.value = '';
+        if (cardFilter) cardFilter.value = '';
+        
+        applyAllFilters();
     }
 
     function renderTransactionsTable(transactions, showSeeMore) {
@@ -754,6 +807,14 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
             <h2 class="card-title" style="font-size: 1rem; margin: 0;"><i class="fi fi-br-list"></i> Lançamentos do Mês</h2>
             <div style="display: flex; align-items: center; gap: 8px;">
+                <!-- Botão Limpar Filtros (Borracha) -->
+                <button id="clearFiltersBtn" 
+                        onclick="clearTransactionFilters()" 
+                        title="Limpar Filtros"
+                        class="btn-clear-filters">
+                    <i class="fi fi-br-eraser"></i>
+                </button>
+
                 <!-- Filtro de Cartão -->
                 <div id="cardFilterWrapper" style="display: none; align-items: center; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; transition: border-color 0.2s ease; flex-shrink: 0;">
                     <i class="fi fi-br-credit-card" style="color: var(--accent-purple); font-size: 0.9rem; margin-right: 6px; display: flex; align-items: center;"></i>
