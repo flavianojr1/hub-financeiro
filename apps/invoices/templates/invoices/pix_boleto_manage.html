@@ -98,6 +98,42 @@
             grid-template-columns: 1fr;
         }
     }
+
+    /* Classificação Rápida Styles */
+    .hidden-row {
+        display: none !important;
+    }
+    .fast-classify-row {
+        transition: opacity 0.2s ease;
+    }
+    .page-btn {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+        color: var(--text-primary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.85rem;
+    }
+    .page-btn:hover:not(:disabled) {
+        border-color: var(--accent-purple);
+        color: var(--accent-purple);
+        background: var(--bg-hover);
+    }
+    .page-btn.active {
+        background: var(--accent-purple);
+        color: white;
+        border-color: var(--accent-purple);
+    }
+    .page-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
 </style>
 {% endblock %}
 
@@ -125,6 +161,11 @@
                 <div class="pix-boleto-form-row">
                     <label class="form-label">Data:</label>
                     {{ form.date }}
+                </div>
+
+                <div class="pix-boleto-form-row" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 0.5rem;">
+                    {{ form.is_recurring }}
+                    <label for="{{ form.is_recurring.id_for_label }}" class="form-label" style="margin-bottom: 0; cursor: pointer;">Lançamento Recorrente (12 meses)</label>
                 </div>
 
                 <div style="margin-top: 1.5rem;">
@@ -175,12 +216,12 @@
                                 </div>
                             </div>
                         </div>
-                        <form method="post" onsubmit="return confirm('Excluir este lançamento?');">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="delete_pix_boleto">
-                            <input type="hidden" name="pb_id" value="{{ pb.pk }}">
-                            <button type="submit" class="btn btn-danger-ghost btn-sm">Excluir</button>
-                        </form>
+                        <div style="display: flex; gap: 5px;">
+                            <button type="button" class="btn btn-danger-ghost btn-sm" 
+                                onclick="openDeleteModal('{{ pb.pk }}', '{{ pb.description }}', {% if pb.is_recurring %}true{% else %}false{% endif %})">
+                                Excluir
+                            </button>
+                        </div>
                     </div>
                     {% endfor %}
                 {% else %}
@@ -193,12 +234,148 @@
         </div>
     </div>
 </div>
+
+<!-- Classificação Rápida para Pix e Boletos -->
+<div class="card fade-in-up" style="margin-top: 2rem; animation-delay: 0.3s;">
+    <div style="margin-bottom: 1.5rem;">
+        <h2 class="card-title" style="margin-bottom: 0;">🚀 Classificação Rápida (Outros)</h2>
+        <p class="text-secondary" style="margin-top: 0.5rem; margin-bottom: 0;">Identifique e crie regras para lançamentos de Pix e Boletos que caíram em "Outros".</p>
+    </div>
+
+    {% if uncategorized_pix_boletos %}
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; margin-bottom: 1rem;">
+        <div style="flex: 1;">
+            <input type="text" id="quickClassifySearch" class="form-input" placeholder="🔍 Buscar lançamento... (ex: Aluguel)" style="width: 100%;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex: 0 0 auto;">
+            <label for="pageSizeSelect" style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 500;">Exibir:</label>
+            <select id="pageSizeSelect" class="form-input" style="height: auto;">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th style="width: 300px;">Ação</th>
+                </tr>
+            </thead>
+            <tbody id="quickClassifyBody">
+                {% for pb in uncategorized_pix_boletos %}
+                <tr class="fast-classify-row">
+                    <td class="text-secondary" style="font-size: 0.85rem;">{{ pb.date|date:"d/m" }}</td>
+                    <td style="font-weight: 500;" title="{{ pb.description }}">{{ pb.description }}</td>
+                    <td style="color: var(--danger-color); font-weight: 600;">R$ {{ pb.amount }}</td>
+                    <td>
+                        <form method="post" class="category-form-row">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="quick_rule">
+                            <input type="hidden" name="keyword" value="{{ pb.description }}">
+                            <div style="display: flex; gap: 5px; width: 100%;">
+                                <select name="category_id" class="form-input" style="height: 38px; padding: 0 10px; font-size: 0.85rem;" required>
+                                    <option value="">Selecione...</option>
+                                    {% for cat in expense_categories %}
+                                    <option value="{{ cat.pk }}">{{ cat.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn btn-primary btn-sm" style="padding: 0 12px; height: 38px;">Fixar</button>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginação -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.5rem; flex-wrap: wrap; gap: 15px;">
+        <div id="paginationInfo" style="color: var(--text-secondary); font-size: 0.85rem;">
+            Mostrando 1-10 de {{ uncategorized_pix_boletos|length }} lançamentos
+        </div>
+        <div id="paginationButtons" style="display: flex; gap: 5px;">
+            <!-- Gerado via JS -->
+        </div>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+        <i class="fi fi-br-check-circle" style="font-size: 2.5rem; opacity: 0.3; margin-bottom: 1rem; display: block;"></i>
+        <p>Todos os Pix e Boletos estão devidamente categorizados! ✨</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de Exclusão (Recorrente) -->
+<div id="deleteModal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1000;">
+    <div class="card" style="max-width: 450px; width: 90%; transform: scale(0.9); transition: all 0.3s ease; border: 1px solid var(--border-color); box-shadow: var(--shadow-xl);">
+        <div style="text-align: center; padding: 1rem;">
+            <div style="width: 60px; height: 60px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 1.8rem;">
+                <i class="fi fi-br-trash"></i>
+            </div>
+            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">Excluir Lançamento?</h3>
+            <p id="deleteModalText" class="text-secondary" style="font-size: 0.95rem; margin-bottom: 2rem;">Deseja excluir o lançamento de <strong id="deleteItemName"></strong>?</p>
+            
+            <form id="deleteForm" method="post" style="display: flex; flex-direction: column; gap: 10px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_pix_boleto">
+                <input type="hidden" name="pb_id" id="modalPbId">
+                <input type="hidden" name="delete_all" id="modalDeleteAll" value="false">
+                
+                <button type="submit" onclick="document.getElementById('modalDeleteAll').value='false'" class="btn btn-danger w-100" style="height: 45px; font-weight: 600;">Sim, excluir apenas este</button>
+                <button type="submit" id="btnDeleteAll" onclick="document.getElementById('modalDeleteAll').value='true'" class="btn btn-danger-ghost w-100" style="height: 45px; font-weight: 600; border: 1px solid #ef444433;">Excluir este e TODOS os futuros</button>
+                <button type="button" onclick="closeDeleteModal()" class="btn btn-ghost w-100" style="height: 45px; font-weight: 600; color: var(--text-secondary);">Cancelar</button>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
 <script>
+// Funções do Modal de Exclusão
+function openDeleteModal(pbId, description, isRecurring) {
+    const modal = document.getElementById('deleteModal');
+    const nameSpan = document.getElementById('deleteItemName');
+    const idInput = document.getElementById('modalPbId');
+    const btnDeleteAll = document.getElementById('btnDeleteAll');
+    const card = modal.querySelector('.card');
+
+    nameSpan.textContent = description;
+    idInput.value = pbId;
+    
+    // Mostra ou esconde o botão de excluir tudo
+    if (btnDeleteAll) {
+        btnDeleteAll.style.display = isRecurring ? 'block' : 'none';
+    }
+
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        card.style.transform = 'scale(1)';
+        modal.style.background = 'rgba(0,0,0,0.5)';
+    }, 10);
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    const card = modal.querySelector('.card');
+    
+    card.style.transform = 'scale(0.9)';
+    modal.style.background = 'transparent';
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Flatpickr
     flatpickr(".flatpickr-date", {
@@ -226,6 +403,134 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!/\d/.test(e.key) && e.key !== 'Enter') e.preventDefault();
         });
     }
+
+    // Sistema de Paginação da Classificação Rápida
+    (function () {
+        const rows = document.querySelectorAll('.fast-classify-row');
+        if (rows.length === 0) return;
+
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        const searchInput = document.getElementById('quickClassifySearch');
+        const paginationInfo = document.getElementById('paginationInfo');
+        const paginationButtons = document.getElementById('paginationButtons');
+
+        let currentPage = 1;
+        let pageSize = parseInt(pageSizeSelect ? pageSizeSelect.value : 10);
+        let filteredRows = Array.from(rows);
+        let totalItems = filteredRows.length;
+
+        function renderPage(page, size) {
+            const start = (page - 1) * size;
+            const end = start + size;
+            let visibleCount = 0;
+
+            // Esconde todas primeiro
+            rows.forEach(row => {
+                row.classList.add('hidden-row');
+                row.style.opacity = '0';
+            });
+
+            // Mostra só os do slice filtrado
+            filteredRows.forEach((row, index) => {
+                if (index >= start && index < end) {
+                    row.classList.remove('hidden-row');
+                    setTimeout(() => row.style.opacity = '1', 10);
+                    visibleCount++;
+                }
+            });
+
+            updatePaginationUI(page, size, visibleCount, totalItems);
+        }
+
+        function updatePaginationUI(page, size, visibleCount, total) {
+            if (paginationInfo) {
+                const startCount = total === 0 ? 0 : ((page - 1) * size) + 1;
+                const endCount = startCount + visibleCount - 1;
+                paginationInfo.textContent = `Mostrando ${startCount} a ${endCount} de ${total} lançamentos`;
+            }
+
+            if (!paginationButtons) return;
+            paginationButtons.innerHTML = '';
+
+            const totalPages = Math.ceil(total / size);
+            if (totalPages <= 1) return;
+
+            // Prev
+            const prevBtn = document.createElement('button');
+            prevBtn.type = 'button';
+            prevBtn.className = 'page-btn';
+            prevBtn.innerHTML = '&laquo;';
+            prevBtn.disabled = page === 1;
+            prevBtn.addEventListener('click', () => {
+                currentPage--;
+                renderPage(currentPage, pageSize);
+            });
+            paginationButtons.appendChild(prevBtn);
+
+            let startPage = Math.max(1, page - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `page-btn ${i === page ? 'active' : ''}`;
+                btn.textContent = i;
+                btn.addEventListener('click', () => {
+                    currentPage = i;
+                    renderPage(currentPage, pageSize);
+                });
+                paginationButtons.appendChild(btn);
+            }
+
+            // Next
+            const nextBtn = document.createElement('button');
+            nextBtn.type = 'button';
+            nextBtn.className = 'page-btn';
+            nextBtn.innerHTML = '&raquo;';
+            nextBtn.disabled = page === totalPages;
+            nextBtn.addEventListener('click', () => {
+                currentPage++;
+                renderPage(currentPage, pageSize);
+            });
+            paginationButtons.appendChild(nextBtn);
+        }
+
+        if (pageSizeSelect) {
+            pageSizeSelect.addEventListener('change', (e) => {
+                pageSize = parseInt(e.target.value);
+                currentPage = 1;
+                renderPage(currentPage, pageSize);
+            });
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                let query = e.target.value.toLowerCase().trim();
+
+                if (query.length >= 3 || query.length === 0) {
+                    if (query.length === 0) {
+                        filteredRows = Array.from(rows);
+                    } else {
+                        filteredRows = Array.from(rows).filter(row => {
+                            const descTd = row.querySelector('[title]');
+                            if (!descTd) return false;
+                            return descTd.textContent.toLowerCase().includes(query) ||
+                                descTd.getAttribute('title').toLowerCase().includes(query);
+                        });
+                    }
+                    totalItems = filteredRows.length;
+                    currentPage = 1;
+                    renderPage(currentPage, pageSize);
+                }
+            });
+        }
+
+        // Init
+        renderPage(currentPage, pageSize);
+    })();
 });
 </script>
 {% endblock %}

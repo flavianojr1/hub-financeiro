@@ -186,10 +186,15 @@ class PixBoletoForm(forms.ModelForm):
             'id': 'id_amount'
         })
     )
+    is_recurring = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+        label='Lançamento Recorrente (Próximos 12 meses)'
+    )
 
     class Meta:
         model = PixBoleto
-        fields = ['description', 'amount', 'date']
+        fields = ['description', 'amount', 'date', 'is_recurring']
         widgets = {
             'description': forms.TextInput(attrs={
                 'class': 'form-input',
@@ -200,6 +205,7 @@ class PixBoletoForm(forms.ModelForm):
                 'placeholder': 'dd/mm/aaaa',
             }),
         }
+
 
     def clean_amount(self):
         amount_str = str(self.cleaned_data.get('amount', ''))

@@ -168,6 +168,8 @@ class PixBoleto(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateField()
     category = models.CharField(max_length=100, blank=True, help_text='Categoria inferida automaticamente')
+    is_recurring = models.BooleanField(default=False)
+    recurring_group_id = models.CharField(max_length=50, blank=True, null=True, help_text='Agrupa saídas recorrentes para exclusão em lote')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

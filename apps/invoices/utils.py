@@ -371,35 +371,48 @@ def process_nubank_csv(csv_file, invoice, target_month=None, target_year=None):
 
 
 def recategorize_user_transactions(user):
-    """Reaplicar regras de categorização em todas as transações do usuário"""
-    from .models import CategoryRule
+    """Reaplicar regras de categorização em todas as transações (Cartão e Pix/Boleto) do usuário"""
+    from .models import Transaction, PixBoleto, CategoryRule
 
     # Buscar regras do usuário
     rules = CategoryRule.objects.filter(user=user).select_related('category').order_by('-priority')
-    
-    # Buscar transações do usuário
+
+    # 1. Recategorizar Transações de Cartão
     transactions = Transaction.objects.filter(invoice__user=user)
-    
     count = 0
     for t in transactions:
         old_category = t.category
-        
-        # Lógica de auto-categorização inline para evitar N queries ou modificar o método do model
         new_category = 'Outros'
         desc_lower = t.description.lower()
-        
+
         for rule in rules:
             if rule.keyword.lower() in desc_lower:
                 new_category = rule.category.name
                 break
-        
-        t.category = new_category
-        
-        if t.category != old_category:
+
+        if new_category != old_category:
+            t.category = new_category
             t.save(update_fields=['category'])
             count += 1
-    return count
 
+    # 2. Recategorizar Pix e Boletos
+    pix_boletos = PixBoleto.objects.filter(user=user)
+    for pb in pix_boletos:
+        old_category = pb.category
+        new_category = 'Outros'
+        desc_lower = pb.description.lower()
+
+        for rule in rules:
+            if rule.keyword.lower() in desc_lower:
+                new_category = rule.category.name
+                break
+
+        if new_category != old_category:
+            pb.category = new_category
+            pb.save(update_fields=['category'])
+            count += 1
+
+    return count
 
 def get_temporal_data(transactions=None):
     """Agrupa transações por mês de referência da fatura e por cartão para gráfico temporal empilhado"""

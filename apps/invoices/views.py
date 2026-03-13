@@ -894,6 +894,12 @@ def pix_boleto_manage(request):
     for pb in pix_boletos:
         pb.category_color = category_color_map.get(pb.category, '#ef4444')
     
+    # Buscar Pix/Boletos não categorizados (Outros) para sugestão rápida
+    uncategorized_pix_boletos = PixBoleto.objects.filter(
+        user=request.user,
+        category='Outros'
+    ).order_by('-date')
+
     form = PixBoletoForm()
 
     if request.method == 'POST':
@@ -904,20 +910,70 @@ def pix_boleto_manage(request):
             if form.is_valid():
                 pb = form.save(commit=False)
                 pb.user = request.user
-                pb.save()
-                messages.success(request, '✅ Lançamento realizado com sucesso!')
+                
+                if pb.is_recurring:
+                    import uuid
+                    from dateutil.relativedelta import relativedelta
+                    group_id = uuid.uuid4().hex
+                    
+                    # Gera a saída atual + 11 meses para frente
+                    for i in range(12):
+                        PixBoleto.objects.create(
+                            user=request.user,
+                            description=pb.description,
+                            amount=pb.amount,
+                            date=pb.date + relativedelta(months=i),
+                            is_recurring=True,
+                            recurring_group_id=group_id
+                        )
+                    messages.success(request, '✅ Lançamento recorrente criado para os próximos 12 meses!')
+                else:
+                    pb.save()
+                    messages.success(request, '✅ Lançamento realizado com sucesso!')
                 return redirect('pix_boleto_manage')
 
         elif action == 'delete_pix_boleto':
             pb_id = request.POST.get('pb_id')
+            delete_all = request.POST.get('delete_all') == 'true'
+            
             pb = get_object_or_404(PixBoleto, pk=pb_id, user=request.user)
-            pb.delete()
-            messages.success(request, '🗑️ Lançamento removido.')
+            
+            if delete_all and pb.recurring_group_id:
+                # Deletar a atual e todas as FUTURAS do mesmo grupo
+                count, _ = PixBoleto.objects.filter(
+                    user=request.user,
+                    recurring_group_id=pb.recurring_group_id,
+                    date__gte=pb.date
+                ).delete()
+                messages.success(request, f'🗑️ {count} lançamentos recorrentes deletados.')
+            else:
+                pb.delete()
+                messages.success(request, '🗑️ Lançamento removido.')
+                
+            return redirect('pix_boleto_manage')
+
+        elif action == 'quick_rule':
+            keyword = request.POST.get('keyword', '').strip()
+            category_id = request.POST.get('category_id')
+            
+            if keyword and category_id:
+                category = get_object_or_404(Category, pk=category_id, user=request.user)
+                # Criar a regra
+                CategoryRule.objects.get_or_create(
+                    keyword=keyword, 
+                    category=category,
+                    defaults={'user': request.user}
+                )
+                # Reaplicar regras (agora afeta Transações e Pix/Boletos)
+                count = recategorize_user_transactions(request.user)
+                messages.success(request, f'✅ Regra criada para "{keyword}"! {count} lançamentos atualizados.')
             return redirect('pix_boleto_manage')
 
     context = {
         'pix_boletos': pix_boletos,
         'form': form,
+        'expense_categories': expense_categories,
+        'uncategorized_pix_boletos': uncategorized_pix_boletos,
     }
 
     return render(request, 'invoices/pix_boleto_manage.html', context)
