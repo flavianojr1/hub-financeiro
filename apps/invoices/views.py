@@ -7,8 +7,8 @@ from django.db.models.functions import TruncMonth
 from django.db import IntegrityError
 from datetime import date
 import calendar
-from .models import Invoice, Transaction, Category, CategoryRule, CreditCard, Income
-from .forms import CSVUploadForm, CategoryForm, CategoryRuleForm, CreditCardForm, IncomeForm
+from .models import Invoice, Transaction, Category, CategoryRule, CreditCard, Income, PixBoleto
+from .forms import CSVUploadForm, CategoryForm, CategoryRuleForm, CreditCardForm, IncomeForm, PixBoletoForm
 from .utils import (
     process_nubank_csv, 
     process_inter_pdf, 
@@ -163,28 +163,36 @@ def dashboard(request):
 
     # Incomes (Entradas)
     all_incomes = Income.objects.filter(user=request.user)
+    all_pix_boletos = PixBoleto.objects.filter(user=request.user)
+
     if selected_month:
         try:
             parts = selected_month.split('-')
             filter_year = int(parts[0])
             filter_month = int(parts[1])
             month_incomes = all_incomes.filter(date__year=filter_year, date__month=filter_month)
+            month_pix_boletos = all_pix_boletos.filter(date__year=filter_year, date__month=filter_month)
         except:
             month_incomes = all_incomes.filter(date__year=today.year, date__month=today.month)
+            month_pix_boletos = all_pix_boletos.filter(date__year=today.year, date__month=today.month)
     else:
         month_incomes = all_incomes.filter(date__year=today.year, date__month=today.month)
+        month_pix_boletos = all_pix_boletos.filter(date__year=today.year, date__month=today.month)
         
     total_income = month_incomes.aggregate(Sum('amount'))['amount__sum'] or 0
+    total_pix_boleto = month_pix_boletos.aggregate(Sum('amount'))['amount__sum'] or 0
+
     # Se filtrado, usa total_amount do filtro. Se não, usa do mês atual para o balanço.
     current_or_filtered_amount = total_amount if filtered else current_month_amount
-    balance = total_income - current_or_filtered_amount
+    balance = total_income - current_or_filtered_amount - total_pix_boleto
 
-    has_any_data = all_transactions.exists() or all_incomes.exists()
+    has_any_data = all_transactions.exists() or all_incomes.exists() or all_pix_boletos.exists()
 
     context = {
         'stats': stats,
         'stats_current_month': stats_current_month,
         'total_income': total_income,
+        'total_pix_boleto': total_pix_boleto,
         'balance': balance,
         'has_any_data': has_any_data,
         'monthly_list': monthly_list,
@@ -872,3 +880,44 @@ def income_manage(request):
     }
 
     return render(request, 'invoices/income_manage.html', context)
+
+
+@login_required
+def pix_boleto_manage(request):
+    """View para gerenciar Pix e Boletos manuais (saídas fora do cartão)"""
+    pix_boletos = PixBoleto.objects.filter(user=request.user)
+    
+    # Usa as mesmas categorias de despesa do cartão
+    expense_categories = Category.objects.filter(user=request.user, type='expense')
+    category_color_map = {cat.name: cat.color for cat in expense_categories}
+    
+    for pb in pix_boletos:
+        pb.category_color = category_color_map.get(pb.category, '#ef4444')
+    
+    form = PixBoletoForm()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'add_pix_boleto':
+            form = PixBoletoForm(request.POST)
+            if form.is_valid():
+                pb = form.save(commit=False)
+                pb.user = request.user
+                pb.save()
+                messages.success(request, '✅ Lançamento realizado com sucesso!')
+                return redirect('pix_boleto_manage')
+
+        elif action == 'delete_pix_boleto':
+            pb_id = request.POST.get('pb_id')
+            pb = get_object_or_404(PixBoleto, pk=pb_id, user=request.user)
+            pb.delete()
+            messages.success(request, '🗑️ Lançamento removido.')
+            return redirect('pix_boleto_manage')
+
+    context = {
+        'pix_boletos': pix_boletos,
+        'form': form,
+    }
+
+    return render(request, 'invoices/pix_boleto_manage.html', context)

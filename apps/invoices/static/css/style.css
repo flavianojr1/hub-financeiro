@@ -484,7 +484,7 @@ body.sidebar-collapsed .sidebar-toggle-container {
 
 .topbar {
     background: var(--bg-secondary);
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-sm) 3rem;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
@@ -661,9 +661,9 @@ body.sidebar-collapsed .sidebar-toggle-container {
 
 /* ---------- Container ---------- */
 .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: var(--spacing-md) var(--spacing-sm);
+    max-width: 100%;
+    margin: 0;
+    padding: var(--spacing-md) 3rem;
     width: 100%;
 }
 

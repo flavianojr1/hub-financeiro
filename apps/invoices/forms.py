@@ -1,6 +1,6 @@
 from django import forms
 from decimal import Decimal, InvalidOperation
-from .models import Category, CategoryRule, CreditCard, Income
+from .models import Category, CategoryRule, CreditCard, Income, PixBoleto
 
 
 class CSVUploadForm(forms.Form):
@@ -171,6 +171,39 @@ class IncomeForm(forms.ModelForm):
         amount_str = amount_str.replace('.', '')
         # Troca a vírgula (decimal) por ponto
         amount_str = amount_str.replace(',', '.')
+        try:
+            val = Decimal(amount_str)
+            return val
+        except InvalidOperation:
+            raise forms.ValidationError("Valor inválido.")
+
+
+class PixBoletoForm(forms.ModelForm):
+    amount = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': '0,00',
+            'id': 'id_amount'
+        })
+    )
+
+    class Meta:
+        model = PixBoleto
+        fields = ['description', 'amount', 'date']
+        widgets = {
+            'description': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Ex: Pix Aluguel, Boleto Internet...',
+            }),
+            'date': forms.TextInput(attrs={
+                'class': 'form-input flatpickr-date',
+                'placeholder': 'dd/mm/aaaa',
+            }),
+        }
+
+    def clean_amount(self):
+        amount_str = str(self.cleaned_data.get('amount', ''))
+        amount_str = amount_str.replace('.', '').replace(',', '.')
         try:
             val = Decimal(amount_str)
             return val

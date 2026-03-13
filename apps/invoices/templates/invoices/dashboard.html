@@ -135,6 +135,13 @@
     .search-wrapper-animate {
         animation: slideInLeft 0.5s ease-out forwards;
     }
+
+    /* Garantir 5 colunas no desktop e manter responsividade */
+    @media (min-width: 1201px) {
+        .stats-grid {
+            grid-template-columns: repeat(5, 1fr) !important;
+        }
+    }
 </style>
 <!-- Stats Grid - Compacted -->
 <div class="stats-grid" style="margin-bottom: 1rem;">
@@ -145,18 +152,29 @@
             </div>
             <div class="stat-content">
                 <div class="stat-label" style="font-size: 0.7rem;">Entradas (Mês)</div>
-                <div class="stat-value" id="kpi-total-income" style="font-size: 1.4rem;">R$ {{ total_income|floatformat:2 }}</div>
+                <div class="stat-value" id="kpi-total-income" style="font-size: 1.4rem; color: #14532d;">R$ {{ total_income|floatformat:2 }}</div>
             </div>
         </div>
     </div>
     <div class="stat-card amount" style="padding: var(--spacing-md);">
         <div class="stat-header">
-            <div class="stat-icon-wrapper" style="width: 40px; height: 40px;">
+            <div class="stat-icon-wrapper" style="width: 40px; height: 40px; background: rgba(138, 5, 190, 0.1); color: #8A05BE;">
                 <i class="fi fi-br-coins" style="font-size: 1.2rem;"></i>
             </div>
             <div class="stat-content">
                 <div class="stat-label" style="font-size: 0.7rem;">Faturas (Mês)</div>
-                <div class="stat-value" id="kpi-total-amount" style="font-size: 1.4rem;">R$ {{ stats_current_month.total_amount|floatformat:2 }}</div>
+                <div class="stat-value" id="kpi-total-amount" style="font-size: 1.4rem; color: #7f1d1d;">R$ {{ stats_current_month.total_amount|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card invoices" style="padding: var(--spacing-md);">
+        <div class="stat-header">
+            <div class="stat-icon-wrapper" style="width: 40px; height: 40px; background: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                <i class="fi fi-br-money-bill-wave" style="font-size: 1.2rem;"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label" style="font-size: 0.7rem;">Pix e Boletos (Mês)</div>
+                <div class="stat-value" id="kpi-total-pix-boleto" style="font-size: 1.4rem; color: #7f1d1d;">R$ {{ total_pix_boleto|floatformat:2 }}</div>
             </div>
         </div>
     </div>
@@ -167,7 +185,7 @@
             </div>
             <div class="stat-content">
                 <div class="stat-label" style="font-size: 0.7rem;">Balanço</div>
-                <div class="stat-value" id="kpi-balance" style="font-size: 1.4rem;">R$ {{ balance|floatformat:2 }}</div>
+                <div class="stat-value" id="kpi-balance" style="font-size: 1.4rem; color: {% if balance >= 0 %}#14532d{% else %}#7f1d1d{% endif %};">R$ {{ balance|floatformat:2 }}</div>
             </div>
         </div>
     </div>
@@ -314,8 +332,14 @@
             // Animar valores
             if (incomeEl) animateValue(incomeEl, currentIncome, data.total_income || 0, 800, 'R$ ', ',00');
             if (amountEl) animateValue(amountEl, currentAmount, data.total_amount, 1000, 'R$ ', ',00');
-            if (balanceEl) animateValue(balanceEl, currentBalance, data.balance || 0, 900, 'R$ ', ',00');
             if (avgEl) animateValue(avgEl, currentAvg, data.avg_amount, 900, 'R$ ', ',00');
+
+            if (balanceEl) {
+                const newBalance = data.balance || 0;
+                animateValue(balanceEl, currentBalance, newBalance, 900, 'R$ ', ',00');
+                // Atualizar cor dinamicamente
+                balanceEl.style.color = newBalance >= 0 ? '#15803d' : '#b91c1c';
+            }
         } catch (error) {
             console.error('Erro ao buscar dados de KPIs:', error);
         }

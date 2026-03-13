@@ -159,3 +159,43 @@ class Income(models.Model):
                 return rule.category.name
 
         return 'Outras Entradas'
+
+
+class PixBoleto(models.Model):
+    """Representa uma saída manual via Pix ou Boleto (fora do cartão)"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pix_boletos')
+    description = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateField()
+    category = models.CharField(max_length=100, blank=True, help_text='Categoria inferida automaticamente')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+        verbose_name = 'Pix/Boleto'
+        verbose_name_plural = 'Pix e Boletos'
+
+    def __str__(self):
+        return f"{self.date} - {self.description}: R$ {self.amount}"
+
+    def save(self, *args, **kwargs):
+        # Auto-categorizar se não tiver categoria
+        if not self.category:
+            self.category = self.auto_categorize()
+        super().save(*args, **kwargs)
+
+    def auto_categorize(self):
+        """Categoriza automaticamente baseado nas regras de palavra-chave do tipo EXPENSE"""
+        desc_lower = self.description.lower()
+        
+        # Buscar regras apenas do tipo 'expense' para este usuário
+        rules = CategoryRule.objects.filter(
+            user=self.user, 
+            category__type='expense'
+        ).select_related('category').order_by('-priority')
+
+        for rule in rules:
+            if rule.keyword.lower() in desc_lower:
+                return rule.category.name
+
+        return 'Outros'
