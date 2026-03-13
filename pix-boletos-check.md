@@ -1,0 +1,111 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - generic [ref=e3]:
+      - img "Hub Financeiro" [ref=e5]
+      - button "Recolher menu" [ref=e6] [cursor=pointer]:
+        - generic [ref=e7]: 
+    - navigation [ref=e8]:
+      - link " Dashboard" [ref=e9] [cursor=pointer]:
+        - /url: /dashboard/
+        - generic [ref=e11]: 
+        - generic [ref=e12]: Dashboard
+      - link " Nova Fatura" [ref=e13] [cursor=pointer]:
+        - /url: /dashboard/upload/
+        - generic [ref=e15]: 
+        - generic [ref=e16]: Nova Fatura
+      - link "尿 Entradas" [ref=e17] [cursor=pointer]:
+        - /url: /dashboard/entradas/
+        - generic [ref=e19]: 尿
+        - generic [ref=e20]: Entradas
+      - link " Pix e Boletos" [ref=e21] [cursor=pointer]:
+        - /url: /dashboard/pix-boletos/
+        - generic [ref=e23]: 
+        - generic [ref=e24]: Pix e Boletos
+      - link " Faturas" [ref=e25] [cursor=pointer]:
+        - /url: /dashboard/faturas/
+        - generic [ref=e27]: 
+        - generic [ref=e28]: Faturas
+      - link " Categorias" [ref=e29] [cursor=pointer]:
+        - /url: /dashboard/categorias/
+        - generic [ref=e31]: 
+        - generic [ref=e32]: Categorias
+      - link " Cartões" [ref=e33] [cursor=pointer]:
+        - /url: /dashboard/cartoes/
+        - generic [ref=e35]: 
+        - generic [ref=e36]: Cartões
+    - generic [ref=e39]:
+      - link "聯 Meu Perfil" [ref=e40] [cursor=pointer]:
+        - /url: /profile/
+        - generic [ref=e42]: 聯
+        - generic [ref=e43]: Meu Perfil
+      - button "Sair" [ref=e45] [cursor=pointer]:
+        - generic [ref=e46]: 
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - button "Tema Claro" [ref=e49] [cursor=pointer]:
+          - generic [ref=e50]: 
+        - button "Tema Escuro" [ref=e51] [cursor=pointer]:
+          - generic [ref=e52]: 
+      - generic [ref=e53]:
+        - text: feito por
+        - link "flavianojr1" [ref=e54] [cursor=pointer]:
+          - /url: https://www.linkedin.com/in/flaviano-junior
+  - generic [ref=e55]:
+    - banner [ref=e56]:
+      - text: 
+      - generic [ref=e57]: Pix e Boletos
+      - generic [ref=e58]:
+        - generic [ref=e59]:
+          - generic [ref=e60]: admin@test.com
+          - button "Sair" [ref=e62] [cursor=pointer]
+        - text:  
+    - main [ref=e63]:
+      - generic [ref=e64]:
+        - generic [ref=e66]:
+          - heading " Novo Lançamento" [level=2] [ref=e67]:
+            - generic [ref=e68]: 
+            - text: Novo Lançamento
+          - generic [ref=e69]:
+            - generic [ref=e70]:
+              - generic [ref=e71]: "Descrição:"
+              - 'textbox "Ex: Pix Aluguel, Boleto Internet..." [ref=e72]'
+            - generic [ref=e73]:
+              - generic [ref=e74]: "Valor (R$):"
+              - textbox "0,00" [ref=e75]
+            - generic [ref=e76]:
+              - generic [ref=e77]: "Data:"
+              - textbox "dd/mm/aaaa" [ref=e78]: 13/03/2026
+            - generic [ref=e79]:
+              - checkbox "Lançamento Recorrente (12 meses)" [ref=e80]
+              - generic [ref=e81] [cursor=pointer]: Lançamento Recorrente (12 meses)
+            - button "Salvar Lançamento" [ref=e83] [cursor=pointer]
+          - paragraph [ref=e85]:
+            - generic [ref=e86]: 
+            - text: Lançamentos manuais são categorizados automaticamente com base nas suas
+            - link "Regras de Categorização" [ref=e87] [cursor=pointer]:
+              - /url: /dashboard/categorias/
+            - text: de despesas.
+        - generic [ref=e89]:
+          - heading "亂 Últimos Lançamentos" [level=2] [ref=e90]:
+            - generic [ref=e91]: 亂
+            - text: Últimos Lançamentos
+          - generic [ref=e93]:
+            - generic [ref=e94]: 
+            - paragraph [ref=e95]: Nenhum lançamento.
+      - generic [ref=e96]:
+        - generic [ref=e97] [cursor=pointer]:
+          - generic [ref=e98]:
+            - heading " Todos os Lançamentos" [level=2] [ref=e99]:
+              - generic [ref=e100]: 
+              - text: Todos os Lançamentos
+            - generic [ref=e101]: 0 lançamento(s)
+          - generic [ref=e102]: 
+        - paragraph [ref=e104]: Nenhum histórico disponível.
+      - generic [ref=e105]:
+        - generic [ref=e106]:
+          - heading "🚀 Classificação Rápida (Outros)" [level=2] [ref=e107]
+          - paragraph [ref=e108]: Identifique e crie regras para lançamentos de Pix e Boletos que caíram em "Outros".
+        - generic [ref=e109]:
+          - generic [ref=e110]: 
+          - paragraph [ref=e111]: Todos os Pix e Boletos estão devidamente categorizados! ✨
+      - text: 菱

@@ -29,8 +29,21 @@
     
     .pix-boleto-page-layout {
         display: grid;
-        grid-template-columns: 1fr 2fr;
+        grid-template-columns: 1fr 1fr;
         gap: 20px;
+        align-items: stretch;
+    }
+
+    .pix-boleto-panel {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .pix-boleto-panel .card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0;
     }
 
     .pix-boleto-form-row {
@@ -92,6 +105,69 @@
         font-size: 0.85rem;
         color: var(--text-secondary);
     }
+
+    /* Accordion Styles */
+    .accordion-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem;
+        cursor: pointer;
+        background: var(--bg-card);
+        border-radius: 12px;
+        transition: all 0.2s ease;
+    }
+    .accordion-header:hover {
+        background: var(--bg-hover);
+    }
+    .accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+    }
+    .accordion-content.active {
+        max-height: 1000px; /* Ajuste conforme necessário */
+        overflow-y: auto;
+    }
+    .accordion-arrow {
+        transition: transform 0.3s ease;
+        color: var(--text-secondary);
+    }
+    .accordion-header.active .accordion-arrow {
+        transform: rotate(180deg);
+    }
+
+    /* Compact Table Styles */
+    .compact-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+    }
+    .compact-table th {
+        text-align: left;
+        color: var(--text-secondary);
+        font-weight: 600;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border-color);
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 0.05em;
+    }
+    .compact-table td {
+        padding: 6px 12px;
+        vertical-align: middle;
+        color: var(--text-primary);
+        border-bottom: 1px solid transparent;
+    }
+    .compact-table tr:hover td {
+        background: var(--bg-hover);
+        border-bottom-color: var(--border-color);
+    }
+    .compact-date { color: var(--text-secondary); width: 80px; }
+    .compact-desc { font-weight: 500; }
+    .compact-category { width: 150px; }
+    .compact-amount { font-weight: 700; text-align: left; width: 130px; white-space: nowrap; }
+    .compact-actions { text-align: right; width: 80px; }
 
     @media (max-width: 1024px) {
         .pix-boleto-page-layout {
@@ -192,14 +268,14 @@
         </div>
     </div>
 
-    <!-- Lista -->
+    <!-- Últimos 5 Lançamentos -->
     <div class="pix-boleto-panel">
         <div class="card fade-in-up" style="animation-delay: 0.2s; height: 100%; display: flex; flex-direction: column;">
-            <h2 class="card-title"><i class="fi fi-br-list" style="color: var(--accent-purple);"></i> Lançamentos Realizados</h2>
+            <h2 class="card-title"><i class="fi fi-br-time-past" style="color: var(--accent-purple);"></i> Últimos Lançamentos</h2>
 
             <div style="flex: 1; overflow-y: auto;" class="custom-scrollbar">
                 {% if pix_boletos %}
-                    {% for pb in pix_boletos %}
+                    {% for pb in pix_boletos|slice:":5" %}
                     <div class="pix-boleto-item">
                         <div class="pix-boleto-item-info">
                             <div class="pix-boleto-item-icon">
@@ -210,16 +286,13 @@
                                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                                     <span class="pix-boleto-item-amount">R$ {{ pb.amount }}</span>
                                     <span class="pix-boleto-item-date">• {{ pb.date|date:"d/m/Y" }}</span>
-                                    {% if pb.category %}
-                                        <span class="badge" style="background: {{ pb.category_color }}1a; color: {{ pb.category_color }}; border: 1px solid {{ pb.category_color }}4d;">{{ pb.category }}</span>
-                                    {% endif %}
                                 </div>
                             </div>
                         </div>
                         <div style="display: flex; gap: 5px;">
                             <button type="button" class="btn btn-danger-ghost btn-sm" 
                                 onclick="openDeleteModal('{{ pb.pk }}', '{{ pb.description }}', {% if pb.is_recurring %}true{% else %}false{% endif %})">
-                                Excluir
+                                <i class="fi fi-br-trash"></i>
                             </button>
                         </div>
                     </div>
@@ -227,19 +300,93 @@
                 {% else %}
                     <div style="text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
                         <i class="fi fi-br-box-open" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem; display: block;"></i>
-                        <p>Nenhum Pix ou Boleto lançado ainda.</p>
+                        <p>Nenhum lançamento.</p>
                     </div>
                 {% endif %}
             </div>
+
+            {% if pix_boletos|length > 5 %}
+            <div style="padding: 0.75rem; text-align: center; border-top: 1px solid var(--border-color); border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+                <button type="button" onclick="scrollToHistory()" 
+                    style="color: var(--accent-purple); font-weight: 600; width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px; background: transparent; border: none; cursor: pointer; padding: 5px; font-size: 0.85rem; transition: opacity 0.2s ease;"
+                    onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                    Ver todos <i class="fi fi-br-angle-small-down" style="font-size: 1.2rem; display: flex; align-items: center; height: 100%;"></i>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Accordion: Todos os Lançamentos -->
+<div id="historySection" class="card fade-in-up" style="margin-top: 2rem; animation-delay: 0.25s; padding: 0;">
+    <div class="accordion-header" id="historyHeader" onclick="toggleAccordion(this)">
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-right: 15px;">
+            <h2 class="card-title" style="margin-bottom: 0;"><i class="fi fi-br-list-check" style="color: var(--accent-purple);"></i> Todos os Lançamentos</h2>
+            <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">{{ pix_boletos|length }} lançamento(s)</span>
+        </div>
+        <i class="fi fi-br-angle-small-down accordion-arrow" style="font-size: 1.5rem;"></i>
+    </div>
+    <div class="accordion-content" id="historyContent">
+        <div style="padding: 0 1.25rem 1.25rem;">
+            {% if pix_boletos %}
+                <div class="table-responsive">
+                    <table class="compact-table">
+                        <thead>
+                            <tr>
+                                <th class="compact-date">Data</th>
+                                <th class="compact-desc">Descrição</th>
+                                <th class="compact-category">Categoria</th>
+                                <th class="compact-amount">Valor</th>
+                                <th class="compact-actions">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pb in pix_boletos %}
+                            <tr>
+                                <td class="compact-date">{{ pb.date|date:"d/m/Y" }}</td>
+                                <td class="compact-desc">
+                                    {{ pb.description }}
+                                    {% if pb.is_recurring %}
+                                        <i class="fi fi-br-refresh" style="font-size: 0.7rem; color: var(--text-secondary); margin-left: 5px;" title="Recorrente"></i>
+                                    {% endif %}
+                                </td>
+                                <td class="compact-category">
+                                    {% if pb.category %}
+                                        <span class="badge" style="background: {{ pb.category_color }}1a; color: {{ pb.category_color }}; border: 1px solid {{ pb.category_color }}4d; font-size: 0.7rem; padding: 2px 8px;">{{ pb.category }}</span>
+                                    {% else %}
+                                        <span class="text-secondary" style="font-size: 0.75rem; font-style: italic;">Outros</span>
+                                    {% endif %}
+                                </td>
+                                <td class="compact-amount" style="color: var(--danger-color);">R$ {{ pb.amount }}</td>
+                                <td class="compact-actions">
+                                    <button type="button" class="btn btn-danger-ghost btn-sm" style="padding: 2px 6px; height: 24px;"
+                                        onclick="openDeleteModal('{{ pb.pk }}', '{{ pb.description }}', {% if pb.is_recurring %}true{% else %}false{% endif %})">
+                                        <i class="fi fi-br-trash" style="font-size: 0.75rem;"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-secondary" style="text-align: center; padding: 2rem;">Nenhum histórico disponível.</p>
+            {% endif %}
         </div>
     </div>
 </div>
 
 <!-- Classificação Rápida para Pix e Boletos -->
 <div class="card fade-in-up" style="margin-top: 2rem; animation-delay: 0.3s;">
-    <div style="margin-bottom: 1.5rem;">
-        <h2 class="card-title" style="margin-bottom: 0;">🚀 Classificação Rápida (Outros)</h2>
-        <p class="text-secondary" style="margin-top: 0.5rem; margin-bottom: 0;">Identifique e crie regras para lançamentos de Pix e Boletos que caíram em "Outros".</p>
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <h2 class="card-title" style="margin-bottom: 0;">🚀 Classificação Rápida (Outros)</h2>
+            <p class="text-secondary" style="margin-top: 0.5rem; margin-bottom: 0;">Identifique e crie regras para lançamentos de Pix e Boletos que caíram em "Outros".</p>
+        </div>
+        <a href="{% url 'category_manage' %}" style="color: var(--accent-purple); text-decoration: none; font-size: 0.85rem; font-weight: 600; padding: 5px 10px; border-radius: 8px; transition: background 0.2s ease;" onmouseover="this.style.background='rgba(139, 92, 246, 0.1)'" onmouseout="this.style.background='transparent'">
+            Gerenciar Categorias <i class="fi fi-br-arrow-right" style="vertical-align: middle; font-size: 0.75rem;"></i>
+        </a>
     </div>
 
     {% if uncategorized_pix_boletos %}
@@ -342,6 +489,33 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
 <script>
+// Função para rolar até o histórico e abrir
+function scrollToHistory() {
+    const header = document.getElementById('historyHeader');
+    const content = document.getElementById('historyContent');
+    
+    if (header && content && !content.classList.contains('active')) {
+        toggleAccordion(header);
+    }
+    
+    document.getElementById('historySection').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Funções do Accordion
+function toggleAccordion(header) {
+    const content = header.nextElementSibling;
+    const arrow = header.querySelector('.accordion-arrow');
+    
+    header.classList.toggle('active');
+    content.classList.toggle('active');
+    
+    if (content.classList.contains('active')) {
+        content.style.maxHeight = content.scrollHeight + "px";
+    } else {
+        content.style.maxHeight = null;
+    }
+}
+
 // Funções do Modal de Exclusão
 function openDeleteModal(pbId, description, isRecurring) {
     const modal = document.getElementById('deleteModal');
