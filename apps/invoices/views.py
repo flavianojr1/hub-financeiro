@@ -948,9 +948,30 @@ def pix_boleto_manage(request):
                 messages.success(request, f'🗑️ {count} lançamentos recorrentes deletados.')
             else:
                 pb.delete()
-                messages.success(request, '🗑️ Lançamento removido.')
-                
+                messages.success(request, '🗑️ Lançamento deletado.')
             return redirect('pix_boleto_manage')
+
+        elif action == 'update_pix_boleto':
+            pb_id = request.POST.get('pb_id')
+            description = request.POST.get('description')
+            amount_str = request.POST.get('amount', '0').replace('.', '').replace(',', '.')
+            date_str = request.POST.get('date')
+            category_name = request.POST.get('category')
+
+            try:
+                from decimal import Decimal
+                import datetime
+                pb = get_object_or_404(PixBoleto, id=pb_id, user=request.user)
+                pb.description = description
+                pb.amount = Decimal(amount_str)
+                pb.date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+                pb.category = category_name or 'Outros'
+                pb.save()
+                messages.success(request, "✅ Lançamento atualizado com sucesso!")
+            except Exception as e:
+                messages.error(request, f"❌ Erro ao atualizar: {str(e)}")
+            return redirect('pix_boleto_manage')
+
 
         elif action == 'quick_rule':
             keyword = request.POST.get('keyword', '').strip()
