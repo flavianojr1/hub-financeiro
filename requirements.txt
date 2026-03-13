@@ -1,1 +1,1 @@
-django`npdfplumber`npanda`nchartjs-django
+django`npdfplumber`npanda`nchartjs-djangopython-dotenv
