@@ -240,6 +240,61 @@
         background: rgba(239, 68, 68, 0.1);
         border-color: rgba(239, 68, 68, 0.2);
     }
+
+    /* Animação SlideUp com Bounce */
+    @keyframes slideUpBounce {
+        0% { transform: translateY(15px); opacity: 0; }
+        60% { transform: translateY(-3px); opacity: 1; }
+        100% { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Animação SlideDown com Fade para saída */
+    @keyframes slideDownFade {
+        0% { transform: translateY(0); opacity: 1; }
+        100% { transform: translateY(15px); opacity: 0; }
+    }
+
+    .edit-card {
+        background: #ffffff;
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.1), 0 4px 6px -2px rgba(139, 92, 246, 0.05);
+        animation: slideUpBounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        margin: 5px 0;
+    }
+
+    .edit-card.closing {
+        animation: slideDownFade 0.25s ease-in forwards;
+    }
+
+    .edit-card-table {
+        background: #ffffff;
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        padding: 10px;
+        animation: slideUpBounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    
+    .edit-card-table.closing {
+        animation: slideDownFade 0.25s ease-in forwards;
+    }
+
+    /* Estilo de Inputs na Edição */
+    .edit-mode .form-input {
+        background: #ffffff !important;
+        font-weight: 600 !important;
+        border: 1px solid var(--border-color);
+        transition: all 0.2s ease;
+    }
+    .edit-mode .form-input::placeholder {
+        font-weight: 600 !important;
+        opacity: 0.6;
+    }
+    .edit-mode .form-input:focus {
+        border-color: var(--accent-purple) !important;
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        outline: none;
+    }
 </style>
 {% endblock %}
 
@@ -336,25 +391,37 @@
                         </div>
 
                         <!-- Edit Mode (Inline) -->
-                        <div class="edit-mode" style="display: none; width: 100%;">
+                        <div class="edit-mode edit-card" style="display: none; width: 100%;">
                             <form method="post" style="width: 100%;">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="update_pix_boleto">
                                 <input type="hidden" name="pb_id" value="{{ pb.pk }}">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                                    <input type="text" name="description" class="form-input" value="{{ pb.description }}" placeholder="Descrição" required>
-                                    <input type="text" name="amount" class="form-input amount-mask" value="{{ pb.amount }}" placeholder="Valor" required>
-                                    <input type="date" name="date" class="form-input" value="{{ pb.date|date:'Y-m-d' }}" required>
-                                    <select name="category" class="form-input">
-                                        <option value="Outros" {% if pb.category == 'Outros' %}selected{% endif %}>Outros</option>
-                                        {% for cat in expense_categories %}
-                                            <option value="{{ cat.name }}" {% if pb.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
-                                        {% endfor %}
-                                    </select>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                                    <div class="pix-boleto-form-row" style="margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 0.75rem;">Descrição</label>
+                                        <input type="text" name="description" class="form-input" value="{{ pb.description }}" placeholder="Descrição" required>
+                                    </div>
+                                    <div class="pix-boleto-form-row" style="margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 0.75rem;">Valor</label>
+                                        <input type="text" name="amount" class="form-input amount-mask" value="{{ pb.amount }}" placeholder="0,00" required>
+                                    </div>
+                                    <div class="pix-boleto-form-row" style="margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 0.75rem;">Data</label>
+                                        <input type="text" name="date" class="form-input flatpickr-date" value="{{ pb.date|date:'Y-m-d' }}" required>
+                                    </div>
+                                    <div class="pix-boleto-form-row" style="margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 0.75rem;">Categoria</label>
+                                        <select name="category" class="form-input">
+                                            <option value="Outros" {% if pb.category == 'Outros' %}selected{% endif %}>Outros</option>
+                                            {% for cat in expense_categories %}
+                                                <option value="{{ cat.name }}" {% if pb.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
                                 </div>
-                                <div style="display: flex; gap: 5px; justify-content: flex-end;">
-                                    <button type="button" class="btn btn-ghost btn-sm" onclick="toggleEdit('{{ pb.pk }}', false)">Cancelar</button>
-                                    <button type="submit" class="btn btn-primary btn-sm">Salvar</button>
+                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <button type="button" class="btn-action-ghost btn-action-red" onclick="toggleEdit('{{ pb.pk }}', false)" style="width: auto; padding: 0 15px;">Cancelar</button>
+                                    <button type="submit" class="btn btn-primary btn-sm" style="padding: 0 20px;">Salvar Alterações</button>
                                 </div>
                             </form>
                         </div>
@@ -599,25 +666,32 @@ function toggleEdit(pbId, isEditing, isTable = false) {
     if (isEditing) {
         viewModes.forEach(el => el.style.display = 'none');
         editModes.forEach(el => {
+            el.classList.remove('closing');
             el.style.display = isTable ? 'table-cell' : 'block';
         });
         
-        // Aplicar máscara Nubank no campo de valor que acabou de aparecer
         const amountInput = parent.querySelector('.amount-mask');
         if (amountInput) {
             applyNubankMask(amountInput);
         }
     } else {
-        viewModes.forEach(el => {
-            if (isTable) {
-                // Restaurar display original dependendo da classe
-                if (el.tagName === 'TD') el.style.display = 'table-cell';
-                else el.style.display = 'block';
-            } else {
-                el.style.display = 'flex';
-            }
-        });
-        editModes.forEach(el => el.style.display = 'none');
+        // Iniciar animação de saída
+        editModes.forEach(el => el.classList.add('closing'));
+        
+        setTimeout(() => {
+            viewModes.forEach(el => {
+                if (isTable) {
+                    if (el.tagName === 'TD') el.style.display = 'table-cell';
+                    else el.style.display = 'block';
+                } else {
+                    el.style.display = 'flex';
+                }
+            });
+            editModes.forEach(el => {
+                el.style.display = 'none';
+                el.classList.remove('closing');
+            });
+        }, 200); // Tempo da animação slideDownFade
     }
 }
 
@@ -717,7 +791,9 @@ document.addEventListener('DOMContentLoaded', function() {
         dateFormat: "Y-m-d",
         altInput: true,
         altFormat: "d/m/Y",
-        defaultDate: "today"
+        defaultDate: "today",
+        allowInput: true,
+        clickOpens: true
     });
 
     // Mascara de valor (Nubank style)
