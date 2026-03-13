@@ -961,16 +961,34 @@ def pix_boleto_manage(request):
             try:
                 from decimal import Decimal
                 import datetime
+                from django.http import JsonResponse
+                
                 pb = get_object_or_404(PixBoleto, id=pb_id, user=request.user)
                 pb.description = description
                 pb.amount = Decimal(amount_str)
                 pb.date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
                 pb.category = category_name or 'Outros'
                 pb.save()
-                messages.success(request, "✅ Lançamento atualizado com sucesso!")
+                
+                # Buscar a cor da categoria para o retorno
+                category_obj = Category.objects.filter(user=request.user, name=pb.category, type='expense').first()
+                category_color = category_obj.color if category_obj else '#ef4444'
+                
+                # Retornar dados formatados para o JS atualizar a tela sem reload
+                return JsonResponse({
+                    'status': 'success',
+                    'message': '✅ Lançamento atualizado!',
+                    'data': {
+                        'description': pb.description,
+                        'amount': f"{pb.amount:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'),
+                        'date': pb.date.strftime('%d/%m/%Y'),
+                        'category': pb.category,
+                        'category_color': category_color,
+                        'is_recurring': pb.is_recurring
+                    }
+                })
             except Exception as e:
-                messages.error(request, f"❌ Erro ao atualizar: {str(e)}")
-            return redirect('pix_boleto_manage')
+                return JsonResponse({'status': 'error', 'message': f"❌ Erro: {str(e)}"}, status=400)
 
 
         elif action == 'quick_rule':

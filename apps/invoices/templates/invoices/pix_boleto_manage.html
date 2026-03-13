@@ -140,7 +140,8 @@
     /* Compact Table Styles */
     .compact-table {
         width: 100%;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
         font-size: 0.85rem;
     }
     .compact-table th {
@@ -154,20 +155,93 @@
         letter-spacing: 0.05em;
     }
     .compact-table td {
-        padding: 6px 12px;
+        padding: 0 12px;
+        height: 48px;
         vertical-align: middle;
         color: var(--text-primary);
         border-bottom: 1px solid transparent;
+        overflow: hidden;
+    }
+    
+    /* Container para transição estável */
+    .cell-content {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+    }
+
+    .view-part, .edit-part {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        width: 100%;
+        flex-shrink: 0;
+    }
+
+    .edit-part {
+        position: absolute;
+        left: 0;
+        opacity: 0;
+        transform: translateX(20px);
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    /* Estado de Edição */
+    tr.is-editing .view-part {
+        opacity: 0;
+        transform: translateX(-20px);
+        pointer-events: none;
+    }
+
+    tr.is-editing .edit-part {
+        opacity: 1;
+        transform: translateX(0);
+        pointer-events: auto;
+    }
+
+    tr.is-editing td {
+        background: #ffffff !important;
+        border-top: 1px solid rgba(139, 92, 246, 0.5) !important;
+        border-bottom: 1px solid rgba(139, 92, 246, 0.5) !important;
+        box-shadow: 0 8px 12px -8px rgba(139, 92, 246, 0.2), 0 -8px 12px -8px rgba(139, 92, 246, 0.2) !important;
+        z-index: 10;
+        position: relative;
+    }
+
+    /* Garantir fundo branco, foco roxo e visual semi-bold nos inputs da tabela */
+    .edit-part .form-input {
+        padding: 0 8px !important;
+        height: 32px !important;
+        width: 100%;
+        background: #ffffff !important;
+        font-weight: 600 !important;
+        border: 1px solid var(--border-color);
+        transition: all 0.2s ease;
+    }
+    .edit-part .form-input:focus {
+        border-color: var(--accent-purple) !important;
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        outline: none;
     }
     .compact-table tr:hover td {
         background: var(--bg-hover);
         border-bottom-color: var(--border-color);
     }
-    .compact-date { color: var(--text-secondary); width: 80px; }
+    .compact-date { color: var(--text-secondary); width: 140px; }
     .compact-desc { font-weight: 500; }
-    .compact-category { width: 150px; }
+    .compact-category { width: 170px; }
     .compact-amount { font-weight: 700; text-align: left; width: 130px; white-space: nowrap; }
     .compact-actions { text-align: right; width: 80px; }
+
+    /* Ajuste fino para inputs dentro da tabela */
+    .edit-part .form-input {
+        padding: 0 8px !important;
+        height: 32px !important;
+        width: 100%;
+    }
 
     @media (max-width: 1024px) {
         .pix-boleto-page-layout {
@@ -241,17 +315,29 @@
         border-color: rgba(239, 68, 68, 0.2);
     }
 
-    /* Animação SlideUp com Bounce */
+    /* Animação SlideUp com Bounce (Para os Cards) */
     @keyframes slideUpBounce {
         0% { transform: translateY(15px); opacity: 0; }
         60% { transform: translateY(-3px); opacity: 1; }
         100% { transform: translateY(0); opacity: 1; }
     }
 
-    /* Animação SlideDown com Fade para saída */
+    /* Animação SlideDown com Fade (Para os Cards) */
     @keyframes slideDownFade {
         0% { transform: translateY(0); opacity: 1; }
         100% { transform: translateY(15px); opacity: 0; }
+    }
+
+    /* Animação Slide In Left (Para a Tabela) */
+    @keyframes slideInLeft {
+        0% { transform: translateX(30px); opacity: 0; }
+        100% { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Animação Slide Out Left (Para a Tabela) */
+    @keyframes slideOutLeft {
+        0% { transform: translateX(0); opacity: 1; }
+        100% { transform: translateX(-30px); opacity: 0; }
     }
 
     .edit-card {
@@ -269,14 +355,14 @@
     }
 
     .edit-card-table {
-        background: #ffffff;
-        border: 1px solid rgba(139, 92, 246, 0.3);
-        padding: 10px;
-        animation: slideUpBounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        background: #ffffff !important;
+        border: 1px solid rgba(139, 92, 246, 0.3) !important;
+        padding: 8px !important;
+        animation: slideInLeft 0.3s ease-out forwards;
     }
     
     .edit-card-table.closing {
-        animation: slideDownFade 0.25s ease-in forwards;
+        animation: slideOutLeft 0.25s ease-in forwards;
     }
 
     /* Estilo de Inputs na Edição */
@@ -392,7 +478,7 @@
 
                         <!-- Edit Mode (Inline) -->
                         <div class="edit-mode edit-card" style="display: none; width: 100%;">
-                            <form method="post" style="width: 100%;">
+                            <form onsubmit="handleUpdate(event, '{{ pb.pk }}', false)" style="width: 100%;">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="update_pix_boleto">
                                 <input type="hidden" name="pb_id" value="{{ pb.pk }}">
@@ -474,61 +560,92 @@
                         <tbody>
                             {% for pb in pix_boletos %}
                             <tr id="pb-row-{{ pb.pk }}">
-                                <!-- View Mode Cells -->
-                                <td class="compact-date view-mode">{{ pb.date|date:"d/m/Y" }}</td>
-                                <td class="compact-desc view-mode">
-                                    {{ pb.description }}
-                                    {% if pb.is_recurring %}
-                                        <i class="fi fi-br-refresh" style="font-size: 0.7rem; color: var(--text-secondary); margin-left: 5px;" title="Recorrente"></i>
-                                    {% endif %}
+                                <!-- Data -->
+                                <td class="compact-date">
+                                    <div class="cell-content">
+                                        <div class="view-part">{{ pb.date|date:"d/m/Y" }}</div>
+                                        <div class="edit-part">
+                                            <input type="text" form="edit-form-{{ pb.pk }}" name="date" class="form-input flatpickr-date" value="{{ pb.date|date:'Y-m-d' }}" style="height: 32px; font-size: 0.8rem; width: 100%;">
+                                        </div>
+                                    </div>
                                 </td>
-                                <td class="compact-category view-mode">
-                                    {% if pb.category %}
-                                        <span class="badge" style="background: {{ pb.category_color }}1a; color: {{ pb.category_color }}; border: 1px solid {{ pb.category_color }}4d; font-size: 0.7rem; padding: 2px 8px;">{{ pb.category }}</span>
-                                    {% else %}
-                                        <span class="text-secondary" style="font-size: 0.75rem; font-style: italic;">Outros</span>
-                                    {% endif %}
-                                </td>
-                                <td class="compact-amount view-mode" style="color: var(--danger-color);">R$ {{ pb.amount }}</td>
-                                <td class="compact-actions view-mode">
-                                    <div style="display: flex; gap: 4px; justify-content: flex-end;">
-                                        <button type="button" class="btn btn-ghost btn-sm" style="padding: 2px 6px; height: 24px; color: #3b82f6;"
-                                            onclick="toggleEdit('{{ pb.pk }}', true, true)">
-                                            <i class="fi fi-br-pen-square" style="font-size: 0.75rem;"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-danger-ghost btn-sm" style="padding: 2px 6px; height: 24px;"
-                                            onclick="openDeleteModal('{{ pb.pk }}', '{{ pb.description }}', {% if pb.is_recurring %}true{% else %}false{% endif %})">
-                                            <i class="fi fi-br-trash" style="font-size: 0.75rem;"></i>
-                                        </button>
+                                
+                                <!-- Descrição -->
+                                <td class="compact-desc">
+                                    <div class="cell-content">
+                                        <div class="view-part">
+                                            {{ pb.description }}
+                                            {% if pb.is_recurring %}
+                                                <i class="fi fi-br-refresh" style="font-size: 0.7rem; color: var(--text-secondary); margin-left: 5px;" title="Recorrente"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="edit-part">
+                                            <input type="text" form="edit-form-{{ pb.pk }}" name="description" class="form-input" value="{{ pb.description }}" style="height: 32px; font-size: 0.8rem; width: 100%;" required>
+                                        </div>
                                     </div>
                                 </td>
 
-                                <!-- Edit Mode Cell (Full Row) -->
-                                <td colspan="5" class="edit-mode" style="display: none; background: var(--bg-hover); padding: 8px;">
-                                    <form method="post" style="display: flex; gap: 8px; align-items: center; width: 100%;">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="action" value="update_pix_boleto">
-                                        <input type="hidden" name="pb_id" value="{{ pb.pk }}">
+                                <!-- Categoria -->
+                                <td class="compact-category">
+                                    <div class="cell-content">
+                                        <div class="view-part">
+                                            {% if pb.category %}
+                                                <span class="badge" style="background: {{ pb.category_color }}1a; color: {{ pb.category_color }}; border: 1px solid {{ pb.category_color }}4d; font-size: 0.7rem; padding: 2px 8px;">{{ pb.category }}</span>
+                                            {% else %}
+                                                <span class="text-secondary" style="font-size: 0.75rem; font-style: italic;">Outros</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="edit-part">
+                                            <select form="edit-form-{{ pb.pk }}" name="category" class="form-input" style="height: 32px; font-size: 0.8rem; width: 100%;">
+                                                <option value="Outros" {% if pb.category == 'Outros' %}selected{% endif %}>Outros</option>
+                                                {% for cat in expense_categories %}
+                                                    <option value="{{ cat.name }}" {% if pb.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Valor -->
+                                <td class="compact-amount" style="color: #ef4444;">
+                                    <div class="cell-content">
+                                        <div class="view-part">R$ {{ pb.amount }}</div>
+                                        <div class="edit-part">
+                                            <input type="text" form="edit-form-{{ pb.pk }}" name="amount" class="form-input amount-mask" value="{{ pb.amount }}" style="height: 32px; font-size: 0.8rem; width: 100%; font-weight: 700;" required>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Ações -->
+                                <td class="compact-actions">
+                                    <div class="cell-content" style="justify-content: flex-end;">
+                                        <!-- View Actions -->
+                                        <div class="view-part" style="display: flex; gap: 4px; justify-content: flex-end;">
+                                            <button type="button" class="btn-action-ghost btn-action-blue" style="height: 24px; width: 24px;"
+                                                onclick="toggleEdit('{{ pb.pk }}', true, true)">
+                                                <i class="fi fi-br-pen-square" style="font-size: 0.75rem;"></i>
+                                            </button>
+                                            <button type="button" class="btn-action-ghost btn-action-red" style="height: 24px; width: 24px;"
+                                                onclick="openDeleteModal('{{ pb.pk }}', '{{ pb.description }}', {% if pb.is_recurring %}true{% else %}false{% endif %})">
+                                                <i class="fi fi-br-trash" style="font-size: 0.75rem;"></i>
+                                            </button>
+                                        </div>
                                         
-                                        <input type="date" name="date" class="form-input" value="{{ pb.date|date:'Y-m-d' }}" style="width: 130px; font-size: 0.8rem; height: 32px;">
-                                        <input type="text" name="description" class="form-input" value="{{ pb.description }}" style="flex: 1; font-size: 0.8rem; height: 32px;" required>
-                                        <select name="category" class="form-input" style="width: 140px; font-size: 0.8rem; height: 32px;">
-                                            <option value="Outros" {% if pb.category == 'Outros' %}selected{% endif %}>Outros</option>
-                                            {% for cat in expense_categories %}
-                                                <option value="{{ cat.name }}" {% if pb.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <input type="text" name="amount" class="form-input amount-mask" value="{{ pb.amount }}" style="width: 100px; font-size: 0.8rem; height: 32px; font-weight: 700;" required>
-                                        
-                                        <div style="display: flex; gap: 4px;">
-                                            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleEdit('{{ pb.pk }}', false, true)" style="height: 32px; padding: 0 8px;">
+                                        <!-- Edit Actions -->
+                                        <div class="edit-part" style="justify-content: flex-end;">
+                                            <form onsubmit="handleUpdate(event, '{{ pb.pk }}', true)" id="edit-form-{{ pb.pk }}" style="display: none;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="update_pix_boleto">
+                                                <input type="hidden" name="pb_id" value="{{ pb.pk }}">
+                                            </form>
+                                            <button type="button" class="btn-action-ghost btn-action-red" onclick="toggleEdit('{{ pb.pk }}', false, true)" style="height: 24px; width: 24px;">
                                                 <i class="fi fi-br-cross" style="font-size: 0.7rem;"></i>
                                             </button>
-                                            <button type="submit" class="btn btn-primary btn-sm" style="height: 32px; padding: 0 12px;">
+                                            <button type="submit" form="edit-form-{{ pb.pk }}" class="btn-action-ghost btn-action-blue" style="height: 24px; width: 24px;">
                                                 <i class="fi fi-br-check" style="font-size: 0.7rem;"></i>
                                             </button>
                                         </div>
-                                    </form>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -626,8 +743,8 @@
 </div>
 
 <!-- Modal de Exclusão (Recorrente) -->
-<div id="deleteModal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1000;">
-    <div class="card" style="max-width: 450px; width: 90%; transform: scale(0.9); transition: all 0.3s ease; border: 1px solid var(--border-color); box-shadow: var(--shadow-xl);">
+<div id="deleteModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; z-index: 9999; background: rgba(0,0,0,0); transition: background 0.3s ease; backdrop-filter: blur(0px);">
+    <div class="card" style="max-width: 450px; width: 90%; transform: scale(0.9); transition: all 0.3s ease; border: 1px solid var(--border-color); box-shadow: var(--shadow-xl); background: var(--bg-card); margin-top: -10vh;">
         <div style="text-align: center; padding: 1rem;">
             <div style="width: 60px; height: 60px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 1.8rem;">
                 <i class="fi fi-br-trash"></i>
@@ -654,44 +771,115 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
 <script>
+// Função para processar atualização via AJAX
+async function handleUpdate(event, pbId, isTable) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    try {
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            const data = result.data;
+            
+            // 1. Atualizar na TABELA (se existir na tela)
+            const tableRow = document.getElementById(`pb-row-${pbId}`);
+            if (tableRow) {
+                tableRow.querySelector('.compact-date .view-part').textContent = data.date;
+                const descView = tableRow.querySelector('.compact-desc .view-part');
+                descView.innerHTML = data.description + (data.is_recurring ? ' <i class="fi fi-br-refresh" style="font-size: 0.7rem; color: var(--text-secondary); margin-left: 5px;" title="Recorrente"></i>' : '');
+                
+                const catView = tableRow.querySelector('.compact-category .view-part');
+                if (data.category && data.category !== 'Outros') {
+                    catView.innerHTML = `<span class="badge" style="background: ${data.category_color}1a; color: ${data.category_color}; border: 1px solid ${data.category_color}4d; font-size: 0.7rem; padding: 2px 8px;">${data.category}</span>`;
+                } else {
+                    catView.innerHTML = '<span class="text-secondary" style="font-size: 0.75rem; font-style: italic;">Outros</span>';
+                }
+                tableRow.querySelector('.compact-amount .view-part').textContent = `R$ ${data.amount}`;
+                
+                // Sincronizar também os valores dos inputs caso o usuário abra a edição novamente
+                tableRow.querySelector('input[name="description"]').value = data.description;
+                tableRow.querySelector('input[name="amount"]').value = data.amount.replace('.', '');
+                tableRow.querySelector('select[name="category"]').value = data.category;
+            }
+
+            // 2. Atualizar no CARD (se existir na tela)
+            const cardItem = document.getElementById(`pb-item-${pbId}`);
+            if (cardItem) {
+                cardItem.querySelector('.pix-boleto-item-desc').textContent = data.description;
+                const detailsDiv = cardItem.querySelector('.pix-boleto-item-details div');
+                let detailsHTML = `<span class="pix-boleto-item-amount">R$ ${data.amount}</span>`;
+                detailsHTML += `<span class="pix-boleto-item-date">• ${data.date}</span>`;
+                if (data.category && data.category !== 'Outros') {
+                    detailsHTML += ` <span class="badge" style="background: ${data.category_color}1a; color: ${data.category_color}; border: 1px solid ${data.category_color}4d; font-size: 0.7rem; padding: 2px 8px;">${data.category}</span>`;
+                }
+                detailsDiv.innerHTML = detailsHTML;
+
+                // Sincronizar inputs do card
+                cardItem.querySelector('input[name="description"]').value = data.description;
+                cardItem.querySelector('input[name="amount"]').value = data.amount.replace('.', '');
+                cardItem.querySelector('select[name="category"]').value = data.category;
+            }
+            
+            // Fechar modo de edição do elemento que disparou a ação
+            toggleEdit(pbId, false, isTable);
+            
+        } else {
+            alert(result.message);
+        }
+    } catch (error) {
+        console.error('Erro na requisição:', error);
+        alert('Ocorreu um erro ao salvar as alterações.');
+    }
+}
+
 // Função para alternar entre modo de visualização e edição in-line
 function toggleEdit(pbId, isEditing, isTable = false) {
     const parentId = isTable ? `pb-row-${pbId}` : `pb-item-${pbId}`;
     const parent = document.getElementById(parentId);
     if (!parent) return;
 
-    const viewModes = parent.querySelectorAll('.view-mode');
-    const editModes = parent.querySelectorAll('.edit-mode');
-
-    if (isEditing) {
-        viewModes.forEach(el => el.style.display = 'none');
-        editModes.forEach(el => {
-            el.classList.remove('closing');
-            el.style.display = isTable ? 'table-cell' : 'block';
-        });
-        
-        const amountInput = parent.querySelector('.amount-mask');
-        if (amountInput) {
-            applyNubankMask(amountInput);
+    if (isTable) {
+        // Lógica para Tabela (Colunas Fixas + Slide Lateral)
+        if (isEditing) {
+            parent.classList.add('is-editing');
+            const amountInput = parent.querySelector('.amount-mask');
+            if (amountInput) applyNubankMask(amountInput);
+        } else {
+            parent.classList.remove('is-editing');
         }
     } else {
-        // Iniciar animação de saída
-        editModes.forEach(el => el.classList.add('closing'));
-        
-        setTimeout(() => {
-            viewModes.forEach(el => {
-                if (isTable) {
-                    if (el.tagName === 'TD') el.style.display = 'table-cell';
-                    else el.style.display = 'block';
-                } else {
-                    el.style.display = 'flex';
-                }
-            });
+        // Lógica para Cards (Últimos Lançamentos - Slide Vertical)
+        const viewModes = parent.querySelectorAll('.view-mode');
+        const editModes = parent.querySelectorAll('.edit-mode');
+
+        if (isEditing) {
+            viewModes.forEach(el => el.style.display = 'none');
             editModes.forEach(el => {
-                el.style.display = 'none';
                 el.classList.remove('closing');
+                el.style.display = 'block';
             });
-        }, 200); // Tempo da animação slideDownFade
+            const amountInput = parent.querySelector('.amount-mask');
+            if (amountInput) applyNubankMask(amountInput);
+        } else {
+            editModes.forEach(el => el.classList.add('closing'));
+            setTimeout(() => {
+                viewModes.forEach(el => el.style.display = 'flex');
+                editModes.forEach(el => {
+                    el.style.display = 'none';
+                    el.classList.remove('closing');
+                });
+            }, 200);
+        }
     }
 }
 
