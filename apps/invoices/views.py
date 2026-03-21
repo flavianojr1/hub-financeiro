@@ -5,6 +5,8 @@ from django.http import JsonResponse
 from django.db.models import Count, Sum, Q
 from django.db.models.functions import TruncMonth
 from django.db import IntegrityError
+import os
+import requests
 from datetime import date
 import calendar
 from .models import Invoice, Transaction, Category, CategoryRule, CreditCard, Income, PixBoleto
@@ -14,7 +16,8 @@ from .utils import (
     process_inter_pdf, 
     get_temporal_data, 
     get_category_data, 
-    recategorize_user_transactions
+    recategorize_user_transactions,
+    get_financial_context
 )
 
 MONTH_NAMES = {
@@ -210,6 +213,101 @@ def dashboard(request):
 
     return render(request, 'invoices/dashboard.html', context)
 
+
+@login_required
+def chat_view(request):
+    """View para o chat com o Consultor AI usando a API da NVIDIA e Memória de Sessão"""
+    if request.method == 'POST':
+        import json
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message', '')
+
+            if not user_message:
+                return JsonResponse({'status': 'error', 'message': 'Mensagem vazia'}, status=400)
+
+            # 1. Gerenciar Histórico de Chat (Memória na Sessão)
+            if 'chat_history' not in request.session:
+                request.session['chat_history'] = []
+            
+            chat_history = request.session['chat_history']
+
+            # 2. Obter Contexto Financeiro Real
+            financial_context = get_financial_context(request.user)
+
+            # 3. Configurar Chamada para NVIDIA
+            api_key = os.getenv('NVIDIA_API_KEY')
+            invoke_url = "https://integrate.api.nvidia.com/v1/chat/completions"
+            
+            from datetime import datetime
+            today_str = datetime.now().strftime('%d/%m/%Y')
+            current_month_name = MONTH_NAMES.get(datetime.now().month)
+
+            system_prompt = (
+                "Você é o 'Consultor Hub Financeiro', um assistente especialista em finanças pessoais. "
+                f"HOJE É DIA {today_str} ({current_month_name}).\n\n"
+                "REGRAS DE FORMATAÇÃO (MUITO IMPORTANTES):\n"
+                "1. Para que suas tabelas apareçam corretamente, você DEVE SEMPRE colocar DUAS QUEBRAS DE LINHA (pressionar Enter duas vezes) antes de começar uma tabela.\n"
+                "2. Nunca escreva texto grudado no topo de uma tabela.\n"
+                "3. Use Markdown para negrito e listas.\n\n"
+                "REGRAS DE DADOS:\n"
+                "1. Baseie-se SEMPRE nos DADOS REAIS abaixo.\n"
+                "2. Mantenha o contexto da conversa anterior.\n\n"
+                f"{financial_context}"
+            )
+
+            # Montar a lista de mensagens (System + Histórico + Pergunta Atual)
+            messages = [{"role": "system", "content": system_prompt}]
+            
+            # Adiciona as últimas 6 mensagens do histórico para não estourar o contexto
+            for msg in chat_history[-6:]:
+                messages.append(msg)
+            
+            # Adiciona a pergunta atual
+            messages.append({"role": "user", "content": user_message})
+
+            payload = {
+                "model": "mistralai/mistral-small-4-119b-2603",
+                "messages": messages,
+                "max_tokens": 2048,
+                "temperature": 0.2,
+                "top_p": 0.7,
+                "stream": False
+            }
+
+            response = requests.post(
+                invoke_url, 
+                headers={
+                    "Authorization": f"Bearer {api_key}", 
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                }, 
+                json=payload, 
+                timeout=45
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                ai_response = result['choices'][0]['message']['content']
+                
+                # 4. Atualizar Histórico na Sessão
+                chat_history.append({"role": "user", "content": user_message})
+                chat_history.append({"role": "assistant", "content": ai_response})
+                request.session['chat_history'] = chat_history[-10:] # Mantém apenas as últimas 10
+                request.session.modified = True
+                
+                return JsonResponse({'status': 'success', 'response': ai_response})
+            else:
+                return JsonResponse({'status': 'error', 'message': f'Erro API: {response.status_code}'}, status=500)
+
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    # GET: Limpa o histórico ao recarregar a página (opcional, para começar conversa nova)
+    if 'chat_history' in request.session:
+        del request.session['chat_history']
+    
+    return render(request, 'invoices/chat.html', {'topbar_title': 'Consultor AI'})
 
 
 @login_required

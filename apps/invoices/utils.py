@@ -507,3 +507,137 @@ def get_category_data(transactions=None):
         'labels': labels,
         'data': data
     }
+
+
+def get_financial_context(user):
+    """
+    Consolida o histórico financeiro com a lógica estrita do Gráfico de Evolução.
+    Filtra previsões redundantes usando a data de corte da última fatura real.
+    """
+    from django.db.models import Sum, Q
+    from datetime import date
+    import calendar
+    from .models import Transaction, Income, PixBoleto, Invoice, Category
+    from collections import defaultdict
+
+    # 1. Determinar a Data de Corte (Igual ao Dashboard)
+    last_invoice = Invoice.objects.filter(user=user).exclude(
+        year__isnull=True, month__isnull=True
+    ).order_by('-year', '-month').first()
+    
+    cutoff_date = None
+    if last_invoice:
+        last_day = calendar.monthrange(last_invoice.year, last_invoice.month)[1]
+        cutoff_date = date(last_invoice.year, last_invoice.month, last_day)
+
+    # 2. Agrupamento Analítico
+    analise = defaultdict(lambda: {
+        'total_card': 0.0, 
+        'card_details': defaultdict(float),
+        'cat_details': defaultdict(float),
+        'total_income': 0.0,
+        'total_pix': 0.0,
+        'pix_details': defaultdict(float)
+    })
+
+    # --- PROCESSAR CARTÃO (Com Filtro de Corte) ---
+    all_trans = Transaction.objects.filter(invoice__user=user).select_related('invoice__credit_card')
+    for t in all_trans:
+        if t.is_predicted:
+            # Só inclui previsão se for DEPOIS da última fatura real
+            if cutoff_date and t.date <= cutoff_date:
+                continue
+            m_key = (t.date.year, t.date.month)
+        else:
+            # Real: Sempre inclui no mês da fatura
+            m_key = (t.invoice.year, t.invoice.month)
+        
+        card_name = t.invoice.credit_card.name if t.invoice else "Geral"
+        analise[m_key]['total_card'] += float(t.amount)
+        analise[m_key]['card_details'][card_name] += float(t.amount)
+        analise[m_key]['cat_details'][t.category or "Outros"] += float(t.amount)
+
+    # --- PROCESSAR ENTRADAS E PIX (Data Real) ---
+    for i in Income.objects.filter(user=user):
+        m_key = (i.date.year, i.date.month)
+        analise[m_key]['total_income'] += float(i.amount)
+
+    for p in PixBoleto.objects.filter(user=user):
+        m_key = (p.date.year, p.date.month)
+        analise[m_key]['total_pix'] += float(p.amount)
+        analise[m_key]['pix_details'][p.category or "Outros"] += float(p.amount)
+
+    # 3. Montar o texto
+    context = "### RELATÓRIO ANALÍTICO (LÓGICA DO DASHBOARD)\n"
+    context += f"Hoje: {date.today().strftime('%d/%m/%Y')}\n"
+    context += "IMPORTANTE: Use o 'TOTAL CARTÃO' para perguntas sobre faturas e o gráfico de evolução.\n\n"
+    
+    sorted_months = sorted(analise.keys(), reverse=True)
+    for year, month in sorted_months:
+        data = analise[(year, month)]
+        saldo = data['total_income'] - data['total_card'] - data['total_pix']
+        
+        is_future = date(year, month, 1) > date.today().replace(day=1)
+        tag = "[PREVISÃO]" if is_future else "[REAL]"
+        
+        context += f"#### PERÍODO: {month:02d}/{year} {tag}\n"
+        context += f"- **Entradas:** R$ {data['total_income']:,.2f}\n"
+        context += f"- **TOTAL CARTÃO (GRÁFICO):** R$ {data['total_card']:,.2f}\n"
+        context += f"- **TOTAL PIX/BOLETOS:** R$ {data['total_pix']:,.2f}\n"
+        context += f"- **SALDO FINAL:** R$ {saldo:,.2f}\n"
+        
+        if data['card_details']:
+            cards_str = ", ".join([f"{name}: R$ {val:,.2f}" for name, val in data['card_details'].items()])
+            context += f"  - Detalhe por Cartão: {cards_str}\n"
+
+        context += "  | Categoria | Origem | Valor |\n"
+        context += "  | :--- | :--- | :--- |\n"
+        # Mostra as Top 8 categorias de cartão
+        for cat, val in sorted(data['cat_details'].items(), key=lambda x: x[1], reverse=True)[:8]:
+            context += f"  | {cat} | Cartão | R$ {val:,.2f} |\n"
+        # Mostra as categorias de Pix
+        for cat, val in sorted(data['pix_details'].items(), key=lambda x: x[1], reverse=True):
+            context += f"  | {cat} | Pix/Boleto | R$ {val:,.2f} |\n"
+        context += "\n"
+
+    # 4. DETALHAMENTO DE PARCELAS E PREVISÕES FUTURAS
+    context += "### DETALHAMENTO DE LANÇAMENTOS PREVISTOS (FUTUROS):\n"
+    future_trans = Transaction.objects.filter(
+        invoice__user=user, 
+        is_predicted=True, 
+        date__gt=date.today()
+    ).order_by('date')[:20]
+    
+    if future_trans.exists():
+        for ft in future_trans:
+            context += f"- {ft.date.strftime('%d/%m/%Y')}: {ft.description} -> R$ {ft.amount:,.2f} (Cartão)\n"
+    else:
+        context += "- Nenhuma parcela futura específica listada no momento.\n"
+
+    # 5. LISTAGEM COMPLETA DE TRANSAÇÕES DE CARTÃO (ORDEM DE VALOR)
+    context += "\n### LISTAGEM INTEGRAL DE TRANSAÇÕES DE CARTÃO:\n"
+    all_trans_list = Transaction.objects.filter(invoice__user=user).order_by('-amount')
+    for tt in all_trans_list:
+        cat = tt.category or "Outros"
+        periodo = f"{tt.invoice.month}/{tt.invoice.year}" if tt.invoice else tt.date.strftime('%m/%y')
+        context += f"- {tt.date.strftime('%d/%m/%y')}: {tt.description[:30]} [{cat}] -> R$ {tt.amount:,.2f} (Ref: {periodo})\n"
+
+    # 6. LISTAGEM COMPLETA DE PIX / BOLETOS
+    context += "\n### LISTAGEM INTEGRAL DE PIX E BOLETOS:\n"
+    all_pix_list = PixBoleto.objects.filter(user=user).order_by('-date')
+    for p in all_pix_list:
+        cat = p.category or "Outros"
+        context += f"- {p.date.strftime('%d/%m/%y')}: {p.description[:30]} [{cat}] -> R$ {p.amount:,.2f}\n"
+
+    # 7. GASTOS ACUMULADOS POR ESTABELECIMENTO (TODOS)
+    context += "\n### TOTAL ACUMULADO POR LOJA/ESTABELECIMENTO (HISTÓRICO):\n"
+    from django.db.models import Count
+    all_shops = Transaction.objects.filter(invoice__user=user).values('description').annotate(
+        total=Sum('amount'), 
+        qtd=Count('id')
+    ).order_by('-total')
+    
+    for shop in all_shops:
+        context += f"- {shop['description'][:30]}: R$ {shop['total']:,.2f} ({shop['qtd']} compras)\n"
+
+    return context

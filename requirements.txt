@@ -1,1 +1,7 @@
-django`npdfplumber`npanda`nchartjs-djangopython-dotenv
+django
+pdfplumber
+pandas
+chartjs-django
+python-dotenv
+requests
+python-dateutil
